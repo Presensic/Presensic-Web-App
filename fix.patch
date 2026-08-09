@@ -1,0 +1,26 @@
+--- src/components/EmployeeDashboard.tsx
++++ src/components/EmployeeDashboard.tsx
+@@ -491,6 +491,24 @@
+     return new File([blob], filename, { type: mimeString });
+   };
+ 
++  const uploadPhotoToStorage = async (file: File): Promise<string | null> => {
++    const supabase = getSupabase();
++    if (!supabase) return null;
++    
++    try {
++      const fileExt = file.name.split('.').pop() || 'jpg';
++      const fileName = `${employeeUser.id}-${Math.random()}.${fileExt}`;
++      const { data, error } = await supabase.storage.from('avatars').upload(fileName, file);
++      if (error) throw error;
++      
++      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
++      return publicUrl;
++    } catch (err) {
++      console.error("Error uploading photo:", err);
++      return null;
++    }
++  };
++
+   // Profile Selfie Update States
+   const [isUpdatingProfileSelfie, setIsUpdatingProfileSelfie] = useState(false);

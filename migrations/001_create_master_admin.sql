@@ -1,0 +1,10 @@
+CREATE TABLE IF NOT EXISTS master_admin (
+  id SERIAL PRIMARY KEY,
+  whatsapp TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'master_admin',
+  is_active BOOLEAN DEFAULT TRUE,
+  last_login TIMESTAMP,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
