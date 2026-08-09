@@ -24,21 +24,24 @@ export default function App() {
       return null;
     }
   });
+  
+  console.log('Current User on Render:', currentUser);
 
+  // Force render check for logged-in users is handled by the initializer below
+  
   const [currentView, setCurrentView] = useState<
     "home" | "login" | "employer_dashboard" | "employee_dashboard" | "master_admin" | "face_registration"
   >(() => {
     try {
-      const savedUser = localStorage.getItem("presensic_user");
-      if (!savedUser) return "home";
-      
-      const parsed = JSON.parse(savedUser);
-      if (parsed?.role === "employer") return "employer_dashboard";
-      if (parsed?.role === "master_admin") return "master_admin";
-      if (parsed?.role === "employee") {
-        return parsed.faceRegistered === false ? "face_registration" : "employee_dashboard";
+      if (currentUser) {
+        if (currentUser.role === "employer") return "employer_dashboard";
+        if (currentUser.role === "master_admin") return "master_admin";
+        if (currentUser.role === "employee") {
+          return currentUser.faceRegistered === false ? "face_registration" : "employee_dashboard";
+        }
       }
-      return "home";
+      const savedView = localStorage.getItem("presensic_current_view");
+      return (savedView as any) || "home";
     } catch {
       return "home";
     }

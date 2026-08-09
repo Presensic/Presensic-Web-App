@@ -680,15 +680,14 @@ export default function LoginScreen({
                 </div>
 
                 {/* Log In Button */}
-                <motion.button
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
-                  type="submit"
+                <button
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); handleEmployeeSubmit(e as any); }}
                   className="w-full py-3 px-4 bg-slate-900 hover:bg-slate-850 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer mt-2"
                   id="btn-employee-login"
                 >
                   Log In to Employee Portal
-                </motion.button>
+                </button>
 
                 {/* Switcher & Registration links */}
                 <div className="text-center pt-4 flex flex-col gap-4">
@@ -778,15 +777,14 @@ export default function LoginScreen({
                 </div>
 
                 {/* Log In Button */}
-                <motion.button
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
-                  type="submit"
+                <button
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); handleEmployerSubmit(e as any); }}
                   className="w-full py-3 px-4 bg-slate-900 hover:bg-slate-850 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer mt-2"
                   id="btn-employer-login"
                 >
                   Log In to Employer Portal
-                </motion.button>
+                </button>
 
                 {/* Switcher & Registration links */}
                 <div className="text-center pt-4 flex flex-col gap-4">
