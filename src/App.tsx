@@ -120,6 +120,7 @@ export default function App() {
             onBackToHome={() => setCurrentView("home")}
             onEnterDashboard={handleEnterDashboard}
             onLoginSuccess={handleLoginSuccess}
+            setView={setCurrentView}
             employees={employees}
             onOpenRegisterModal={() => { setCurrentView("home"); setIsRegisterModalOpen(true); }}
           />

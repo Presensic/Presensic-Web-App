@@ -23,6 +23,7 @@ interface LoginScreenProps {
   onBackToHome: () => void;
   onEnterDashboard: (role: "employer" | "employee", userData?: any) => void;
   onLoginSuccess?: (user: any) => void;
+  setView?: (view: any) => void;
   employees: any[];
   onOpenRegisterModal: () => void;
   initialTab?: "employee" | "employer";
@@ -32,6 +33,7 @@ export default function LoginScreen({
   onBackToHome,
   onEnterDashboard,
   onLoginSuccess,
+  setView,
   employees,
   onOpenRegisterModal,
   initialTab = "employee"
@@ -362,8 +364,11 @@ export default function LoginScreen({
       };
       localStorage.setItem("presensic_user", JSON.stringify(userPayload));
       console.log('SAVED TO LOCALSTORAGE:', localStorage.getItem('presensic_user'));
-      if (onLoginSuccess) {
+      if (typeof onLoginSuccess === 'function') {
         onLoginSuccess(userPayload);
+      }
+      if (typeof setView === 'function') {
+        setView(userPayload.faceRegistered ? 'employee_dashboard' : 'face_registration');
       } else {
         onEnterDashboard("employee", userPayload);
       }
