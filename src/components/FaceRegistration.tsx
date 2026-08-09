@@ -719,13 +719,15 @@ export default function FaceRegistration({ onBack, onComplete, employeeName }: F
         if (rawUser) {
           const userObj = JSON.parse(rawUser);
           if (userObj?.id) employeeId = String(userObj.id);
-          if (userObj?.companyId) companyId = String(userObj.companyId);
+          const cId = userObj?.companyId ?? userObj?.company_id ?? userObj?.organization_id ?? '1';
+          companyId = String(cId);
         } else {
           const rawEmployee = localStorage.getItem("presensic_employee_user");
           if (rawEmployee) {
             const empObj = JSON.parse(rawEmployee);
             if (empObj?.id) employeeId = String(empObj.id);
-            if (empObj?.companyId) companyId = String(empObj.companyId);
+            const cId = empObj?.companyId ?? empObj?.company_id ?? empObj?.organization_id ?? '1';
+            companyId = String(cId);
           }
         }
       } catch (err) {
@@ -999,13 +1001,15 @@ export default function FaceRegistration({ onBack, onComplete, employeeName }: F
             if (rawUser) {
               const userObj = JSON.parse(rawUser);
               if (userObj?.id) employeeId = String(userObj.id);
-              if (userObj?.companyId) companyId = String(userObj.companyId);
+              const cId = userObj?.companyId ?? userObj?.company_id ?? userObj?.organization_id ?? '1';
+              companyId = String(cId);
             } else {
               const rawEmployee = localStorage.getItem("presensic_employee_user");
               if (rawEmployee) {
                 const empObj = JSON.parse(rawEmployee);
                 if (empObj?.id) employeeId = String(empObj.id);
-                if (empObj?.companyId) companyId = String(empObj.companyId);
+                const cId = empObj?.companyId ?? empObj?.company_id ?? empObj?.organization_id ?? '1';
+                companyId = String(cId);
               }
             }
           } catch (err) {}
