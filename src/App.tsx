@@ -59,6 +59,12 @@ export default function App() {
     localStorage.setItem("presensic_current_view", currentView);
   }, [currentView]);
 
+  useEffect(() => {
+    if (!currentUser) {
+      setCurrentView("home");
+    }
+  }, [currentUser]);
+
   const handleEnterDashboard = (rawRole: "employer" | "employee", userData?: any) => {
     const role = userData?.role || (userData?.isMasterAdmin ? "master_admin" : rawRole);
     const userPayload = { ...(userData || {}), role };

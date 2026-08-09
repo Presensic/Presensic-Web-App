@@ -345,19 +345,21 @@ export default function LoginScreen({
       }
 
       // Provision employee session
-      onEnterDashboard("employee", {
+      const userPayload = {
         id: matchedEmp.id,
-        name: matchedEmp.name,
+        name: matchedEmp.name || 'Employee',
         email: matchedEmp.email || `${matchedEmp.id.toLowerCase()}@presensic.com`,
         whatsApp: matchedEmp.whatsapp || matchedEmp.phone || "+91 98765 43210",
         orgName: orgName,
         orgType: orgType,
-        designation: matchedEmp.role,
+        designation: matchedEmp.role || 'N/A',
         selfiePreview: matchedEmp.avatar,
         avatar: matchedEmp.avatar,
         companyId: matchedEmp.company_id,
         faceRegistered: !!matchedEmp.face_lock_setup
-      });
+      };
+      localStorage.setItem("presensic_user", JSON.stringify(userPayload));
+      onEnterDashboard("employee", userPayload);
     } catch (err: any) {
       console.error("Employee login exception:", err);
       setError("An unexpected error occurred during login.");
