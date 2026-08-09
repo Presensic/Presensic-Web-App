@@ -11,6 +11,9 @@ interface FaceRegistrationProps {
 }
 
 export default function FaceRegistration({ onBack, onComplete, employeeName }: FaceRegistrationProps) {
+  if (!employeeName) {
+    return <div className="min-h-screen flex items-center justify-center text-slate-300">Loading user profile...</div>;
+  }
   const [cameraState, setCameraState] = useState<"initializing" | "active" | "error">("initializing");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [detectionResult, setDetectionResult] = useState<"none" | "one" | "multiple" | null>(null);

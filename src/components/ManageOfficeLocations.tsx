@@ -107,7 +107,7 @@ export default function ManageOfficeLocations({ zones, setZones, companyId, isGa
     } catch (e) {}
 
     if (empData) {
-      const localId = empData.company_id || empData.companyId;
+      const localId = empData?.company_id ?? empData?.companyId ?? '';
       if (localId) {
         const verified = await verifyCompanyExists(localId);
         if (verified) return verified;

@@ -147,7 +147,11 @@ export default function EmployeeDashboard({
   setTickets = () => {}
 }: EmployeeDashboardProps) {
   // Check if company trial is expired
-  const currentCompany = companies.find(c => c.name === employeeUser.orgName || String(c.id) === String(employeeUser.companyId)) || { status: "Trial Active", created_at: new Date().toISOString() };
+  if (!employeeUser) {
+    return <div className="min-h-screen flex items-center justify-center text-slate-300">Loading user profile...</div>;
+  }
+
+  const currentCompany = companies.find(c => c.name === employeeUser.orgName || String(c.id) === String(employeeUser?.companyId ?? (employeeUser as any)?.company_id ?? '')) || { status: "Trial Active", created_at: new Date().toISOString() };
   const trialCalc = calculateTrialStatus(
     currentCompany.created_at || currentCompany.registered_at,
     currentCompany.status,
@@ -226,7 +230,7 @@ export default function EmployeeDashboard({
     e => (employeeUser.id && e.id === employeeUser.id) || e.email?.toLowerCase() === employeeUser.email?.toLowerCase() || e.name === employeeUser.name
   );
 
-  const activeCompanyId = currentEmployeeInDb?.companyId || employeeUser.companyId || currentCompany?.id;
+  const activeCompanyId = currentEmployeeInDb?.companyId ?? (currentEmployeeInDb as any)?.company_id ?? employeeUser?.companyId ?? (employeeUser as any)?.company_id ?? currentCompany?.id;
   const { settings: systemSettings } = useSystemSettings(activeCompanyId);
 
   // Auto Logout Hook driven by systemSettings.auto_logout_minutes
@@ -445,7 +449,7 @@ export default function EmployeeDashboard({
           faceDescriptor: null,
           isFaceLockRegistered: false,
           officeCoords: OFFICE_COORDS,
-          companyId: employeeUser.companyId
+          companyId: employeeUser?.companyId ?? (employeeUser as any)?.company_id ?? ''
         };
         return [newEmp, ...prev];
       });
@@ -925,7 +929,7 @@ export default function EmployeeDashboard({
     const end = new Date(endDate);
     const totalDays = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1);
 
-    const companyId = currentEmployeeInDb?.companyId || employeeUser.companyId;
+    const companyId = currentEmployeeInDb?.companyId ?? (currentEmployeeInDb as any)?.company_id ?? employeeUser?.companyId ?? (employeeUser as any)?.company_id ?? '';
     const employeeId = employeeUser.id;
 
     console.log("CURRENT COMPANY ID:", companyId);
@@ -1106,7 +1110,7 @@ export default function EmployeeDashboard({
       // Insert into Supabase
       const logPayload = {
         employee_id: currentEmployeeInDb.id,
-        company_id: currentEmployeeInDb.companyId,
+        company_id: currentEmployeeInDb?.companyId ?? currentEmployeeInDb?.company_id ?? '',
         location_name: activeGeofence?.name || "Unassigned",
         location_address: detectedAddress || "Face Match Attempt Location",
         latitude: detectedCoords?.lat || 0,
@@ -1174,7 +1178,7 @@ export default function EmployeeDashboard({
       // Load strict_selfie_match setting
       const isStrict = systemSettings?.strict_selfie_match ?? true;
       // Load confidence threshold (load from localStorage, default 60)
-      const threshold = Number(localStorage.getItem(`presensic_face_match_threshold_${currentEmployeeInDb?.companyId || 'global'}`) || "60");
+      const threshold = Number(localStorage.getItem(`presensic_face_match_threshold_${currentEmployeeInDb?.companyId ?? currentEmployeeInDb?.company_id ?? 'global'}`) || "60");
 
       const isMatchSuccess = (data?.isMatch ?? true) && ((data?.confidence ?? 90) >= threshold);
 
@@ -1341,7 +1345,7 @@ export default function EmployeeDashboard({
     // Fetch fresh system settings directly from Supabase for current company to ensure accurate policy check
     const supabase = getSupabase();
     let currentAllowGeoBypass = systemSettings?.allow_geo_bypass;
-    const activeCompId = currentEmployeeInDb?.companyId || currentEmployeeInDb?.company_id || employeeUser?.companyId || (employeeUser as any)?.company_id || currentCompany?.id;
+    const activeCompId = currentEmployeeInDb?.companyId ?? currentEmployeeInDb?.company_id ?? employeeUser?.companyId ?? (employeeUser as any)?.company_id ?? currentCompany?.id;
     if (supabase) {
       try {
         const { data: latestSysSettings } = await supabase
@@ -1496,7 +1500,7 @@ export default function EmployeeDashboard({
 
       const logPayload = {
         employee_id: currentEmployeeInDb.id,
-        company_id: currentEmployeeInDb.companyId || currentEmployeeInDb.company_id || activeCompId,
+        company_id: currentEmployeeInDb?.companyId ?? currentEmployeeInDb?.company_id ?? activeCompId,
         location_name: activeGeofence?.name || "Unassigned",
         location_address: address,
         latitude: finalDetectedCoords.lat,
@@ -3037,7 +3041,7 @@ export default function EmployeeDashboard({
                 ) : (
                   <FaceVerification
                     userId={currentEmployeeInDb?.id || employeeUser?.id || "EMP-001"}
-                    companyId={currentEmployeeInDb?.company_id || employeeUser?.companyId || "2"}
+                    companyId={currentEmployeeInDb?.company_id ?? currentEmployeeInDb?.companyId ?? employeeUser?.companyId ?? "2"}
                     allowedRadiusMeters={activeGeofence?.radius || 150}
                     onSuccess={(info) => {
                       if (info?.distance !== undefined) {
@@ -3059,7 +3063,7 @@ export default function EmployeeDashboard({
                         if (supabase && currentEmployeeInDb) {
                           await supabase.from("attendance_logs").insert([{
                             employee_id: currentEmployeeInDb.id,
-                            company_id: currentEmployeeInDb.companyId || currentEmployeeInDb.company_id || "1",
+                            company_id: currentEmployeeInDb?.companyId ?? currentEmployeeInDb?.company_id ?? "1",
                             location_name: activeGeofence?.name || "Unassigned",
                             face_verified: false,
                             gps_verified: true,
