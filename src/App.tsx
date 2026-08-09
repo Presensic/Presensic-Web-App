@@ -31,7 +31,7 @@ export default function App() {
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [loginInitialTab, setLoginInitialTab] = useState<"employee" | "employer">("employee");
 
-  // State containers to prevent undefined crashes in dashboards
+  // State arrays to prevent component crashes
   const [employees, setEmployees] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
   const [leaves, setLeaves] = useState<any[]>([]);
@@ -122,6 +122,7 @@ export default function App() {
       );
     }
 
+    // RENDER YOUR REAL EMPLOYEE DASHBOARD (CHECK-IN / CLOCK UI)
     return (
       <ErrorBoundary>
         <EmployeeDashboard 
