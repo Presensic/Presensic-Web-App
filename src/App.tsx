@@ -74,18 +74,18 @@ export default function App() {
     setCurrentUser(userPayload);
     localStorage.setItem("presensic_user", JSON.stringify(userPayload));
 
+    let targetView = "employee_dashboard";
     if (role === "employer") {
-      setCurrentView("employer_dashboard");
+      targetView = "employer_dashboard";
     } else if (role === "master_admin" || userData?.isMasterAdmin) {
-      setCurrentView("master_admin");
+      targetView = "master_admin";
     } else {
       setEmployeeUser(userPayload);
-      if (userPayload.faceRegistered === false) {
-        setCurrentView("face_registration");
-      } else {
-        setCurrentView("employee_dashboard");
-      }
+      targetView = userPayload.faceRegistered === false ? "face_registration" : "employee_dashboard";
     }
+    
+    localStorage.setItem("presensic_current_view", targetView);
+    setCurrentView(targetView as any);
   };
 
   const handleLogOut = () => {

@@ -619,7 +619,7 @@ export default function LoginScreen({
           {/* Forms switcher with animate presence or direct conditions */}
           <div>
             {activeTab === "employee" ? (
-              <form onSubmit={handleEmployeeSubmit} className="space-y-4" id="form-employee-portal">
+              <div className="space-y-4" id="form-employee-portal">
                 {/* ID Input */}
                 <div className="space-y-1.5">
                   <label htmlFor="employeeId" className="text-xs font-bold text-slate-700 block">
@@ -716,9 +716,9 @@ export default function LoginScreen({
                     </motion.button>
                   </div>
                 </div>
-              </form>
+              </div>
             ) : (
-              <form onSubmit={handleEmployerSubmit} className="space-y-4" id="form-employer-portal">
+              <div className="space-y-4" id="form-employer-portal">
                 {/* WhatsApp Input */}
                 <div className="space-y-1.5">
                   <label htmlFor="adminEmail" className="text-xs font-bold text-slate-700 block">
@@ -813,7 +813,7 @@ export default function LoginScreen({
                     </motion.button>
                   </div>
                 </div>
-              </form>
+              </div>
             )}
           </div>
         </motion.div>
