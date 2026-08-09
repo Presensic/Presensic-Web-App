@@ -15,6 +15,7 @@ import MasterAdminDashboard from "./components/MasterAdminDashboard";
 import LoginScreen from "./components/LoginScreen";
 
 export default function App() {
+  // Synchronously restore user from localStorage
   const [currentUser, setCurrentUser] = useState<any>(() => {
     try {
       const saved = localStorage.getItem('presensic_user');
@@ -25,13 +26,21 @@ export default function App() {
   });
 
   const [currentView, setCurrentView] = useState<string>(() => {
-    return localStorage.getItem("presensic_current_view") || "home";
+    const savedView = localStorage.getItem("presensic_current_view");
+    const savedUser = localStorage.getItem("presensic_user");
+    if (savedUser) {
+      const parsed = JSON.parse(savedUser);
+      if (parsed.role === 'employer' || parsed.companyName) return 'employer_dashboard';
+      if (parsed.role === 'master_admin' || parsed.isMasterAdmin) return 'master_admin';
+      return (parsed.faceRegistered || parsed.face_registered) ? 'employee_dashboard' : 'face_registration';
+    }
+    return savedView || "home";
   });
 
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [loginInitialTab, setLoginInitialTab] = useState<"employee" | "employer">("employee");
 
-  // State arrays to prevent component crashes
+  // Shared state containers with default empty array fallbacks to prevent runtime crashes
   const [employees, setEmployees] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
   const [leaves, setLeaves] = useState<any[]>([]);
@@ -65,10 +74,12 @@ export default function App() {
     setCurrentView("home");
   };
 
-  // 1. ACTIVE LOGGED-IN SESSION
+  // ==========================================
+  // ROUTE GUARD 1: LOGGED-IN USERS ONLY
+  // ==========================================
   if (currentUser) {
-    // MASTER ADMIN
-    if (currentUser.role === 'master_admin' || currentUser.isMasterAdmin) {
+    // Master Admin Dashboard
+    if (currentUser.role === 'master_admin' || currentUser.isMasterAdmin || currentView === 'master_admin') {
       return (
         <ErrorBoundary>
           <MasterAdminDashboard onLogOut={handleLogOut} user={currentUser} />
@@ -76,8 +87,8 @@ export default function App() {
       );
     }
 
-    // EMPLOYER PORTAL
-    if (currentUser.role === 'employer' || (currentUser.companyName && currentUser.role !== 'employee')) {
+    // Employer Dashboard
+    if (currentUser.role === 'employer' || (currentUser.companyName && currentUser.role !== 'employee') || currentView === 'employer_dashboard') {
       return (
         <ErrorBoundary>
           <EmployerDashboard 
@@ -100,7 +111,7 @@ export default function App() {
       );
     }
 
-    // EMPLOYEE PORTAL FLOW
+    // Employee Flow: Face Registration vs Employee Dashboard
     const isFaceRegistered = Boolean(currentUser.faceRegistered || currentUser.face_registered);
 
     if (!isFaceRegistered && currentView === 'face_registration') {
@@ -111,6 +122,7 @@ export default function App() {
             onComplete={(res: any) => {
               const updated = { ...currentUser, faceRegistered: true, face_registered: true };
               localStorage.setItem("presensic_user", JSON.stringify(updated));
+              localStorage.setItem("presensic_current_view", "employee_dashboard");
               setCurrentUser(updated);
               setCurrentView("employee_dashboard");
             }}
@@ -122,7 +134,7 @@ export default function App() {
       );
     }
 
-    // RENDER YOUR REAL EMPLOYEE DASHBOARD (CHECK-IN / CLOCK UI)
+    // Default Logged-In Fallback: Render Employee Dashboard (AI Studio Clock / Check In UI)
     return (
       <ErrorBoundary>
         <EmployeeDashboard 
@@ -145,7 +157,9 @@ export default function App() {
     );
   }
 
-  // 2. LANDING / LOGIN VIEW
+  // ==========================================
+  // ROUTE GUARD 2: UNAUTHENTICATED (PUBLIC)
+  // ==========================================
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 font-sans antialiased">
       <ErrorBoundary>
