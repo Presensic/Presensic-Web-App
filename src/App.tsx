@@ -134,24 +134,22 @@ export default function App() {
   };
 
   const handleLogOut = () => {
-    // Instead of setting to null which kicks to landing page by default,
-    // we can clear but keep the option of home if the user intends.
-    // However, to satisfy "strictly return <EmployeeDashboard /> inside a clean dark container, NEVER let a logged-in session fall through",
-    // we can clear the actual custom session or restore defaultFallback.
-    const defaultFallback = {
-      id: "PRES-1285",
-      name: "Parnavi Lotankar",
-      role: "employee",
-      orgName: "DS Ventures",
-      designation: "Software Engineer",
-      email: "parnavi@dsventures.in",
-      faceRegistered: true,
-      face_registered: true,
-      whatsApp: "+91 98765 00000"
-    };
-    localStorage.setItem("presensic_user", JSON.stringify(defaultFallback));
-    setCurrentUser(defaultFallback);
-    setCurrentView("employee_dashboard");
+    // Clear all potential session keys
+    localStorage.removeItem("presensic_user");
+    localStorage.removeItem("presensic_current_view");
+    localStorage.removeItem("presensic_employee_user");
+    localStorage.removeItem("presensic_employer_user");
+    localStorage.removeItem("presensic_saved_locations");
+    localStorage.removeItem("presensic_billing_start_date");
+    localStorage.removeItem("presensic_billing_period");
+    
+    // Clear session storage as well
+    sessionStorage.clear();
+    
+    // Reset state to null to show landing page/login
+    setCurrentUser(null);
+    setCurrentView("home");
+    setEmployeeUser(null);
   };
 
   return (

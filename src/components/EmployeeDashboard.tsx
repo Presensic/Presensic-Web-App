@@ -204,16 +204,8 @@ export default function EmployeeDashboard(props: EmployeeDashboardProps) {
   // Defense-in-depth mount safeguard for Employee session
   useEffect(() => {
     try {
-      const savedEE = localStorage.getItem("presensic_employee_user");
-      const savedEmp = localStorage.getItem("presensic_employer_user");
-      if (!savedEE && (!savedEmp || (() => {
-        try {
-          const parsed = JSON.parse(savedEmp);
-          return !parsed?.isMasterAdmin && parsed?.role !== "master_admin";
-        } catch {
-          return true;
-        }
-      })())) {
+      const savedUser = localStorage.getItem("presensic_user");
+      if (!savedUser) {
         onLogOut();
       }
     } catch (e) {
