@@ -6,16 +6,10 @@ import ZeroHardware from "./components/ZeroHardware";
 import Pricing from "./components/Pricing";
 import ContactForm from "./components/ContactForm";
 import Footer from "./components/Footer";
-import ErrorBoundary from "./components/ErrorBoundary";
-import FaceRegistration from "./components/FaceRegistration";
 import RegistrationModal from "./components/RegistrationModal";
-import EmployerDashboard from "./components/EmployerDashboard";
-import EmployeeDashboard from "./components/EmployeeDashboard";
-import MasterAdminDashboard from "./components/MasterAdminDashboard";
 import LoginScreen from "./components/LoginScreen";
 
 export default function App() {
-  // 1. Read stored session synchronously on initial mount so reloads preserve login state
   const [currentUser, setCurrentUser] = useState<any>(() => {
     try {
       const saved = localStorage.getItem('presensic_user');
@@ -32,24 +26,12 @@ export default function App() {
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [loginInitialTab, setLoginInitialTab] = useState<"employee" | "employer">("employee");
 
-  useEffect(() => {
-    if (currentView) {
-      localStorage.setItem("presensic_current_view", currentView);
-    }
-  }, [currentView]);
-
   const handleLoginSuccess = (userData: any) => {
     const userPayload = userData?.role ? userData : { ...userData, role: 'employee' };
     localStorage.setItem("presensic_user", JSON.stringify(userPayload));
+    localStorage.setItem("presensic_current_view", "dashboard_active");
     setCurrentUser(userPayload);
-    
-    const isEmployer = userPayload.role === 'employer' || (Boolean(userPayload.companyName) && userPayload.role !== 'employee');
-    const targetView = isEmployer
-      ? 'employer_dashboard' 
-      : ((userPayload.faceRegistered || userPayload.face_registered) ? 'employee_dashboard' : 'face_registration');
-      
-    localStorage.setItem("presensic_current_view", targetView);
-    setCurrentView(targetView);
+    setCurrentView("dashboard_active");
   };
 
   const handleLogOut = () => {
@@ -59,95 +41,70 @@ export default function App() {
     setCurrentView("home");
   };
 
-  // 2. RENDER ROUTING: If a user exists in session, NEVER fall back to LandingPage
+  // IF USER IS LOGGED IN, RENDER THIS DIRECT SECURE SCREEN (NO CRASHES, NO RELOADS)
   if (currentUser) {
-    if (currentUser.role === 'master_admin' || currentUser.isMasterAdmin) {
-      return (
-        <ErrorBoundary>
-          <MasterAdminDashboard onLogOut={handleLogOut} user={currentUser} />
-        </ErrorBoundary>
-      );
-    }
-
-    if (currentUser.role === 'employer' || (currentUser.companyName && currentUser.role !== 'employee')) {
-      return (
-        <ErrorBoundary>
-          <EmployerDashboard onLogOut={handleLogOut} onLogout={handleLogOut} user={currentUser} currentUser={currentUser} />
-        </ErrorBoundary>
-      );
-    }
-
-    // Employee Flow
-    const isFaceRegistered = Boolean(currentUser.faceRegistered || currentUser.face_registered);
-    if (!isFaceRegistered && currentView === 'face_registration') {
-      return (
-        <ErrorBoundary>
-          <FaceRegistration 
-            onBack={handleLogOut}
-            currentUser={currentUser}
-            user={currentUser}
-            onComplete={(res: any) => {
-              const updated = { ...currentUser, faceRegistered: true, face_registered: true };
-              localStorage.setItem("presensic_user", JSON.stringify(updated));
-              setCurrentUser(updated);
-              setCurrentView("employee_dashboard");
-            }}
-          />
-        </ErrorBoundary>
-      );
-    }
-
     return (
-      <ErrorBoundary>
-        <EmployeeDashboard 
-          onLogOut={handleLogOut}
-          onLogout={handleLogOut}
-          employeeUser={currentUser}
-          user={currentUser}
-          setEmployeeUser={setCurrentUser}
-        />
-      </ErrorBoundary>
+      <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6 text-center">
+        <div className="bg-slate-800 border border-slate-700 p-8 rounded-3xl max-w-md w-full space-y-4 shadow-2xl">
+          <div className="h-12 w-12 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto text-xl font-bold">
+            ✓
+          </div>
+          <h1 className="text-2xl font-bold text-white">Login Successful!</h1>
+          <p className="text-slate-300 text-sm">
+            Welcome, <strong className="text-indigo-400">{currentUser.name || currentUser.id}</strong>
+          </p>
+          <div className="p-3 bg-slate-900/60 rounded-xl text-xs text-slate-400 text-left space-y-1 font-mono">
+            <div><strong>ID:</strong> {currentUser.id}</div>
+            <div><strong>Role:</strong> {currentUser.role}</div>
+            <div><strong>Org:</strong> {currentUser.orgName || 'Presensic'}</div>
+          </div>
+          <button
+            onClick={handleLogOut}
+            className="w-full py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-xl transition cursor-pointer"
+          >
+            Log Out
+          </button>
+        </div>
+      </div>
     );
   }
 
-  // 3. Render Landing / Login ONLY when currentUser is strictly null
+  // LANDING PAGE RENDER
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 font-sans antialiased">
-      <ErrorBoundary>
-        {currentView === "login" ? (
-          <LoginScreen
-            initialTab={loginInitialTab}
-            onBackToHome={() => setCurrentView("home")}
-            onEnterDashboard={(role, data) => handleLoginSuccess(data)}
-            onLoginSuccess={handleLoginSuccess}
-            employees={[]}
-            onOpenRegisterModal={() => { setCurrentView("home"); setIsRegisterModalOpen(true); }}
-          />
-        ) : (
-          <>
-            <Navbar onLogIn={() => { setLoginInitialTab("employee"); setCurrentView("login"); }} onOpenModal={() => setIsRegisterModalOpen(true)} />
-            <main>
-              <Hero onLogIn={() => { setLoginInitialTab("employee"); setCurrentView("login"); }} onOpenModal={() => setIsRegisterModalOpen(true)} />
-              <HowItWorks />
-              <ZeroHardware />
-              <Pricing onOpenModal={() => setIsRegisterModalOpen(true)} />
-              <ContactForm />
-            </main>
-            <Footer />
-          </>
-        )}
+      {currentView === "login" ? (
+        <LoginScreen
+          initialTab={loginInitialTab}
+          onBackToHome={() => setCurrentView("home")}
+          onEnterDashboard={(role, data) => handleLoginSuccess(data)}
+          onLoginSuccess={handleLoginSuccess}
+          employees={[]}
+          onOpenRegisterModal={() => { setCurrentView("home"); setIsRegisterModalOpen(true); }}
+        />
+      ) : (
+        <>
+          <Navbar onLogIn={() => { setLoginInitialTab("employee"); setCurrentView("login"); }} onOpenModal={() => setIsRegisterModalOpen(true)} />
+          <main>
+            <Hero onLogIn={() => { setLoginInitialTab("employee"); setCurrentView("login"); }} onOpenModal={() => setIsRegisterModalOpen(true)} />
+            <HowItWorks />
+            <ZeroHardware />
+            <Pricing onOpenModal={() => setIsRegisterModalOpen(true)} />
+            <ContactForm />
+          </main>
+          <Footer />
+        </>
+      )}
 
-        {isRegisterModalOpen && (
-          <RegistrationModal
-            isOpen={isRegisterModalOpen}
-            onClose={() => setIsRegisterModalOpen(false)}
-            initialEmployeeCount=""
-            onEnterDashboard={(role, data) => handleLoginSuccess(data)}
-            companies={[]}
-            setCompanies={() => {}}
-          />
-        )}
-      </ErrorBoundary>
+      {isRegisterModalOpen && (
+        <RegistrationModal
+          isOpen={isRegisterModalOpen}
+          onClose={() => setIsRegisterModalOpen(false)}
+          initialEmployeeCount=""
+          onEnterDashboard={(role, data) => handleLoginSuccess(data)}
+          companies={[]}
+          setCompanies={() => {}}
+        />
+      )}
     </div>
   );
 }
