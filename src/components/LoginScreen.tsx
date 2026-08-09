@@ -356,6 +356,7 @@ export default function LoginScreen({
         whatsApp: matchedEmp.whatsapp || matchedEmp.phone || "+91 98765 43210",
         orgName: orgName,
         orgType: orgType,
+        role: 'employee',
         designation: matchedEmp.role || 'N/A',
         selfiePreview: matchedEmp.avatar,
         avatar: matchedEmp.avatar,

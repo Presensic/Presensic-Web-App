@@ -272,20 +272,27 @@ const mapEmployeeToDB = (uiEmp: any, companyId: any) => {
   };
 };
 
-export default function EmployerDashboard({ 
-  onLogOut,
-  user,
-  employees: propEmployees,
-  setEmployees: propSetEmployees,
-  logs: propLogs,
-  setLogs: propSetLogs,
-  leaves: propLeaves,
-  setLeaves: propSetLeaves,
-  companies = [],
-  setCompanies = () => {},
-  tickets = [],
-  setTickets = () => {}
-}: EmployerDashboardProps) {
+export default function EmployerDashboard(props: any) {
+  const onLogOut = props?.onLogOut || props?.onLogout || (() => {});
+  const user = props?.user || props?.currentUser || (() => {
+    try {
+      const saved = localStorage.getItem('presensic_user');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  })();
+  const propEmployees = props?.employees;
+  const propSetEmployees = props?.setEmployees;
+  const propLogs = props?.logs;
+  const propSetLogs = props?.setLogs;
+  const propLeaves = props?.leaves;
+  const propSetLeaves = props?.setLeaves;
+  const companies = props?.companies || [];
+  const setCompanies = props?.setCompanies || (() => {});
+  const tickets = props?.tickets || [];
+  const setTickets = props?.setTickets || (() => {});
+
   const [activeTab, setActiveTab] = useState<"feed" | "team" | "zones" | "settings" | "approvals">("feed");
 
   // Session check in Employer dashboard
@@ -306,7 +313,9 @@ export default function EmployerDashboard({
   }, []);
   
   const [employerUser, setEmployerUser] = useState<any>(() => {
-    if (user) return user;
+    if (user && typeof user === "object" && (user.id || user.email || user.whatsApp || user.orgName || user.companyName || user.name)) {
+      return user;
+    }
     try {
       const savedEmployer = localStorage.getItem("presensic_employer_user");
       if (savedEmployer) {
@@ -669,7 +678,7 @@ export default function EmployerDashboard({
     };
   }, [employerUser?.whatsApp]);
 
-  const createdAt = currentCompany.created_at || currentCompany.registered_at || employerUser.created_at;
+  const createdAt = currentCompany?.created_at || currentCompany?.registered_at || employerUser?.created_at;
 
   const trialStatus = calculateTrialStatus(
     createdAt,

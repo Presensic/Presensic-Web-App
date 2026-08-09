@@ -75,9 +75,12 @@ export default function App() {
   }, [currentView]);
 
   const handleLoginSuccess = (userData: any) => {
-    localStorage.setItem("presensic_user", JSON.stringify(userData));
-    setCurrentUser(userData);
-    const targetView = userData.faceRegistered ? 'employee_dashboard' : 'face_registration';
+    const userPayload = userData.role ? userData : { ...userData, role: (userData.companyName || userData.orgName || userData.org_name) ? 'employer' : 'employee' };
+    localStorage.setItem("presensic_user", JSON.stringify(userPayload));
+    setCurrentUser(userPayload);
+    const targetView = (userPayload.role === 'employer' || userPayload.companyName || userPayload.orgName || userPayload.org_name)
+      ? 'employer_dashboard' 
+      : ((userPayload.faceRegistered || userPayload.face_registered) ? 'employee_dashboard' : 'face_registration');
     localStorage.setItem("presensic_current_view", targetView);
     setCurrentView(targetView);
   };
@@ -90,13 +93,13 @@ export default function App() {
     setCurrentUser(userPayload);
 
     let targetView = "employee_dashboard";
-    if (role === "employer") {
+    if (role === "employer" || userPayload.companyName || userPayload.orgName || userPayload.org_name) {
       targetView = "employer_dashboard";
     } else if (role === "master_admin" || userData?.isMasterAdmin) {
       targetView = "master_admin";
     } else {
       setEmployeeUser(userPayload);
-      targetView = userPayload.faceRegistered === false ? "face_registration" : "employee_dashboard";
+      targetView = (userPayload.faceRegistered === false && !userPayload.face_registered) ? "face_registration" : "employee_dashboard";
     }
     
     localStorage.setItem("presensic_current_view", targetView);
@@ -112,45 +115,19 @@ export default function App() {
 
   return (
     <GlobalErrorBoundary>
-      {currentUser && (currentUser.id || currentUser.email || currentUser.whatsApp || currentUser.role || currentUser.orgName) ? (
+      {currentUser ? (
         <>
           {(currentUser.role === 'master_admin' || currentUser.isMasterAdmin) ? (
             <ErrorBoundary>
               <MasterAdminDashboard onLogOut={handleLogOut} user={currentUser} />
             </ErrorBoundary>
-          ) : currentUser.role === 'employee' ? (
-            !currentUser.faceRegistered ? (
-              <FaceRegistration 
-                onBack={() => { setCurrentView("home"); setCurrentUser(null); }}
-                currentUser={currentUser}
-                onComplete={(res: any) => {
-                  if (res?.faceDetected || res?.skipped) {
-                    setCurrentUser({...currentUser, faceRegistered: true});
-                    setCurrentView("employee_dashboard");
-                  }
-                }}
-              />
-            ) : (
-              <EmployeeDashboard 
-                onLogOut={handleLogOut}
-                employeeUser={currentUser}
-                setEmployeeUser={setCurrentUser}
-                employees={employees}
-                setEmployees={setEmployees}
-                logs={logs}
-                setLogs={setLogs}
-                leaves={leaves}
-                setLeaves={setLeaves}
-                companies={companies}
-                tickets={tickets}
-                setTickets={setTickets}
-              />
-            )
-          ) : (
+          ) : (currentUser.role === 'employer' || (currentUser.companyName && currentUser.role !== 'employee')) ? (
             <ErrorBoundary>
               <EmployerDashboard
                 onLogOut={handleLogOut}
+                onLogout={handleLogOut}
                 user={currentUser}
+                currentUser={currentUser}
                 employees={employees}
                 setEmployees={setEmployees}
                 logs={logs}
@@ -163,12 +140,52 @@ export default function App() {
                 setTickets={setTickets}
               />
             </ErrorBoundary>
+          ) : !(currentUser.faceRegistered || currentUser.face_registered) ? (
+            <FaceRegistration 
+              onBack={() => { setCurrentView("home"); setCurrentUser(null); }}
+              currentUser={currentUser}
+              user={currentUser}
+              onComplete={(res: any) => {
+                if (res?.faceDetected || res?.skipped) {
+                  const updated = { ...currentUser, faceRegistered: true };
+                  localStorage.setItem("presensic_user", JSON.stringify(updated));
+                  setCurrentUser(updated);
+                  setCurrentView("employee_dashboard");
+                }
+              }}
+            />
+          ) : (
+            <EmployeeDashboard 
+              onLogOut={handleLogOut}
+              onLogout={handleLogOut}
+              employeeUser={currentUser}
+              user={currentUser}
+              setEmployeeUser={setCurrentUser}
+              employees={employees}
+              setEmployees={setEmployees}
+              logs={logs}
+              setLogs={setLogs}
+              leaves={leaves}
+              setLeaves={setLeaves}
+              companies={companies}
+              tickets={tickets}
+              setTickets={setTickets}
+            />
           )}
         </>
       ) : (
         <div className="min-h-screen bg-slate-900 text-slate-100 font-sans antialiased selection:bg-indigo-500 selection:text-white">
           <ErrorBoundary>
-            {currentView === "home" && (
+            {currentView === "login" ? (
+              <LoginScreen
+                initialTab={loginInitialTab}
+                onBackToHome={() => setCurrentView("home")}
+                onEnterDashboard={handleEnterDashboard}
+                onLoginSuccess={handleLoginSuccess}
+                employees={employees}
+                onOpenRegisterModal={() => { setCurrentView("home"); setIsRegisterModalOpen(true); }}
+              />
+            ) : (
               <>
                 <Navbar onLogIn={() => { setLoginInitialTab("employee"); setCurrentView("login"); }} onOpenModal={() => setIsRegisterModalOpen(true)} />
                 <main>
@@ -182,17 +199,6 @@ export default function App() {
               </>
             )}
 
-            {currentView === "login" && (
-              <LoginScreen
-                initialTab={loginInitialTab}
-                onBackToHome={() => setCurrentView("home")}
-                onEnterDashboard={handleEnterDashboard}
-                onLoginSuccess={handleLoginSuccess}
-                employees={employees}
-                onOpenRegisterModal={() => { setCurrentView("home"); setIsRegisterModalOpen(true); }}
-              />
-            )}
-            
             {isRegisterModalOpen && (
               <RegistrationModal
                 isOpen={isRegisterModalOpen}
