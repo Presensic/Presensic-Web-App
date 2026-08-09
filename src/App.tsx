@@ -15,7 +15,6 @@ import MasterAdminDashboard from "./components/MasterAdminDashboard";
 import LoginScreen from "./components/LoginScreen";
 
 export default function App() {
-  // Synchronously restore user from localStorage
   const [currentUser, setCurrentUser] = useState<any>(() => {
     try {
       const saved = localStorage.getItem('presensic_user');
@@ -26,21 +25,19 @@ export default function App() {
   });
 
   const [currentView, setCurrentView] = useState<string>(() => {
-    const savedView = localStorage.getItem("presensic_current_view");
     const savedUser = localStorage.getItem("presensic_user");
     if (savedUser) {
       const parsed = JSON.parse(savedUser);
       if (parsed.role === 'employer' || parsed.companyName) return 'employer_dashboard';
       if (parsed.role === 'master_admin' || parsed.isMasterAdmin) return 'master_admin';
-      return (parsed.faceRegistered || parsed.face_registered) ? 'employee_dashboard' : 'face_registration';
+      return 'employee_dashboard';
     }
-    return savedView || "home";
+    return localStorage.getItem("presensic_current_view") || "home";
   });
 
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [loginInitialTab, setLoginInitialTab] = useState<"employee" | "employer">("employee");
 
-  // Shared state containers with default empty array fallbacks to prevent runtime crashes
   const [employees, setEmployees] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
   const [leaves, setLeaves] = useState<any[]>([]);
@@ -58,9 +55,7 @@ export default function App() {
     localStorage.setItem("presensic_user", JSON.stringify(userPayload));
     
     const isEmployer = userPayload.role === 'employer' || (Boolean(userPayload.companyName) && userPayload.role !== 'employee');
-    const targetView = isEmployer
-      ? 'employer_dashboard' 
-      : ((userPayload.faceRegistered || userPayload.face_registered) ? 'employee_dashboard' : 'face_registration');
+    const targetView = isEmployer ? 'employer_dashboard' : 'employee_dashboard';
       
     localStorage.setItem("presensic_current_view", targetView);
     setCurrentUser(userPayload);
@@ -74,12 +69,9 @@ export default function App() {
     setCurrentView("home");
   };
 
-  // ==========================================
-  // ROUTE GUARD 1: LOGGED-IN USERS ONLY
-  // ==========================================
+  // LOGGED IN SESSION ROUTING
   if (currentUser) {
-    // Master Admin Dashboard
-    if (currentUser.role === 'master_admin' || currentUser.isMasterAdmin || currentView === 'master_admin') {
+    if (currentUser.role === 'master_admin' || currentUser.isMasterAdmin) {
       return (
         <ErrorBoundary>
           <MasterAdminDashboard onLogOut={handleLogOut} user={currentUser} />
@@ -87,8 +79,7 @@ export default function App() {
       );
     }
 
-    // Employer Dashboard
-    if (currentUser.role === 'employer' || (currentUser.companyName && currentUser.role !== 'employee') || currentView === 'employer_dashboard') {
+    if (currentUser.role === 'employer' || (currentUser.companyName && currentUser.role !== 'employee')) {
       return (
         <ErrorBoundary>
           <EmployerDashboard 
@@ -111,30 +102,7 @@ export default function App() {
       );
     }
 
-    // Employee Flow: Face Registration vs Employee Dashboard
-    const isFaceRegistered = Boolean(currentUser.faceRegistered || currentUser.face_registered);
-
-    if (!isFaceRegistered && currentView === 'face_registration') {
-      return (
-        <ErrorBoundary>
-          <FaceRegistration 
-            onBack={handleLogOut}
-            onComplete={(res: any) => {
-              const updated = { ...currentUser, faceRegistered: true, face_registered: true };
-              localStorage.setItem("presensic_user", JSON.stringify(updated));
-              localStorage.setItem("presensic_current_view", "employee_dashboard");
-              setCurrentUser(updated);
-              setCurrentView("employee_dashboard");
-            }}
-            currentUser={currentUser}
-            user={currentUser}
-            employeeUser={currentUser}
-          />
-        </ErrorBoundary>
-      );
-    }
-
-    // Default Logged-In Fallback: Render Employee Dashboard (AI Studio Clock / Check In UI)
+    // DIRECT EMPLOYEE DASHBOARD RENDER (DARK CLOCK / CHECK-IN UI)
     return (
       <ErrorBoundary>
         <EmployeeDashboard 
@@ -157,9 +125,7 @@ export default function App() {
     );
   }
 
-  // ==========================================
-  // ROUTE GUARD 2: UNAUTHENTICATED (PUBLIC)
-  // ==========================================
+  // PUBLIC LANDING PAGE
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 font-sans antialiased">
       <ErrorBoundary>
