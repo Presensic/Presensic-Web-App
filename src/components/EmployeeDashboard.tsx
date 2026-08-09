@@ -167,12 +167,19 @@ export default function EmployeeDashboard(props: EmployeeDashboardProps) {
     }
   })();
 
+  // Guard all array methods with safe fallback constants
+  const safeLogs = Array.isArray(logs) ? logs : [];
+  const safeLeaves = Array.isArray(leaves) ? leaves : [];
+  const safeEmployees = Array.isArray(employees) ? employees : [];
+  const safeTickets = Array.isArray(tickets) ? tickets : [];
+  const safeCompanies = Array.isArray(companies) ? companies : [];
+
   // Check if company trial is expired
   if (!employeeUser) {
     return <div className="min-h-screen flex items-center justify-center text-slate-300">Loading user profile...</div>;
   }
 
-  const currentCompany = (companies || []).find(c => c && (c.name === employeeUser?.orgName || String(c.id) === String(employeeUser?.companyId ?? (employeeUser as any)?.company_id ?? ''))) || { status: "Trial Active", created_at: new Date().toISOString() };
+  const currentCompany = safeCompanies.find(c => c && (c.name === employeeUser?.orgName || String(c.id) === String(employeeUser?.companyId ?? (employeeUser as any)?.company_id ?? ''))) || { status: "Trial Active", created_at: new Date().toISOString() };
   const trialCalc = calculateTrialStatus(
     currentCompany?.created_at || currentCompany?.registered_at,
     currentCompany?.status,
@@ -254,7 +261,7 @@ export default function EmployeeDashboard(props: EmployeeDashboardProps) {
   
 
   // Sync state for this specific employee from the general employees list
-  const currentEmployeeInDb = (employees || []).find(
+  const currentEmployeeInDb = safeEmployees.find(
     e => e && ((employeeUser?.id && String(e.id) === String(employeeUser.id)) || (employeeUser?.email && e.email?.toLowerCase() === employeeUser.email.toLowerCase()) || (employeeUser?.name && e.name === employeeUser.name))
   );
 
@@ -1053,57 +1060,72 @@ export default function EmployeeDashboard(props: EmployeeDashboardProps) {
     setGpsStage("loading");
     setGpsError(null);
 
-    if (typeof navigator !== "undefined" && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-          const accuracy = Math.round(position.coords.accuracy);
-          const isLowAccuracy = accuracy > 500;
-          
-          let distance = null;
-          if (activeGeofence && !isLowAccuracy) {
-            distance = calculateDistance(lat, lng, activeGeofence.lat, activeGeofence.lng);
-          }
-          
-          console.log("Real GPS Detected Successfully:", { lat, lng, accuracy, distance, geofence: activeGeofence, isLowAccuracy });
-          
-          setDetectedCoords({ lat, lng, accuracy });
-          setComputedDistance(distance);
-          
-          if (isLowAccuracy) {
-            setGpsError(`Unable to get a precise location from this device. Location accuracy: ${(accuracy / 1000).toFixed(2)} km — too imprecise to verify geofence. Please check in from a mobile device with GPS enabled, or continue to submit as Unverified.`);
-            setGpsStage("low_precision");
-          } else {
-            setGpsStage("success");
-            // Move to summary stage automatically after 1s
-            setTimeout(() => setVerificationStage("summary"), 1000);
-          }
-          
-          // Trigger dynamic OSM reverse geocoding
-          fetchReverseGeocode(lat, lng).then(address => {
-            console.log("OSM Geocoded Address Result:", address);
-            setDetectedAddress(address);
-          });
-        },
-        (err) => {
-          console.error("GPS Error Captured:", { code: err.code, message: err.message, timestamp: new Date().toISOString() });
-          let errorMsg = "GPS permission denied or timed out. High-accuracy location is required.";
-          if (err.code === 1) {
-            errorMsg = "Location permission denied. Please click the location/lock icon in your browser's address bar to allow access for this site.";
-          } else if (err.code === 2) {
-            errorMsg = "Position unavailable. Please ensure GPS/Location services are enabled on your device.";
-          } else if (err.code === 3) {
-            errorMsg = "GPS request timed out. Please try again with a clear view of the sky.";
-          }
-          setGpsError(errorMsg);
-          setGpsStage("error");
-        },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
-      );
-    } else {
-      console.error("Geolocation not supported on this browser.");
-      setGpsError("Geolocation not supported on this browser.");
+    try {
+      if (typeof navigator !== "undefined" && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            try {
+              const lat = position.coords.latitude;
+              const lng = position.coords.longitude;
+              const accuracy = Math.round(position.coords.accuracy);
+              const isLowAccuracy = accuracy > 500;
+              
+              let distance = null;
+              if (activeGeofence && !isLowAccuracy) {
+                distance = calculateDistance(lat, lng, activeGeofence.lat, activeGeofence.lng);
+              }
+              
+              console.log("Real GPS Detected Successfully:", { lat, lng, accuracy, distance, geofence: activeGeofence, isLowAccuracy });
+              
+              setDetectedCoords({ lat, lng, accuracy });
+              setComputedDistance(distance);
+              
+              if (isLowAccuracy) {
+                setGpsError(`Unable to get a precise location from this device. Location accuracy: ${(accuracy / 1000).toFixed(2)} km — too imprecise to verify geofence. Please check in from a mobile device with GPS enabled, or continue to submit as Unverified.`);
+                setGpsStage("low_precision");
+              } else {
+                setGpsStage("success");
+                // Move to summary stage automatically after 1s
+                setTimeout(() => setVerificationStage("summary"), 1000);
+              }
+              
+              // Trigger dynamic OSM reverse geocoding
+              fetchReverseGeocode(lat, lng).then(address => {
+                console.log("OSM Geocoded Address Result:", address);
+                setDetectedAddress(address);
+              }).catch(e => {
+                console.warn("Osm geocode exception caught:", e);
+                setDetectedAddress(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+              });
+            } catch (errInner) {
+              console.error("Exception in GPS success callback:", errInner);
+              setGpsError("Failed to parse GPS coordinate data.");
+              setGpsStage("error");
+            }
+          },
+          (err) => {
+            console.error("GPS Error Captured:", { code: err.code, message: err.message, timestamp: new Date().toISOString() });
+            let errorMsg = "GPS permission denied or timed out. High-accuracy location is required.";
+            if (err.code === 1) {
+              errorMsg = "Location permission denied. Please click the location/lock icon in your browser's address bar to allow access for this site.";
+            } else if (err.code === 2) {
+              errorMsg = "Position unavailable. Please ensure GPS/Location services are enabled on your device.";
+            } else if (err.code === 3) {
+              errorMsg = "GPS request timed out. Please try again with a clear view of the sky.";
+            }
+            setGpsError(errorMsg);
+            setGpsStage("error");
+          },
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
+        );
+      } else {
+        console.error("Geolocation not supported on this browser.");
+        setGpsError("Geolocation not supported on this browser.");
+        setGpsStage("error");
+      }
+    } catch (errOuter) {
+      console.error("Exception starting geolocation capture:", errOuter);
+      setGpsError("An unhandled error occurred while trying to request device location.");
       setGpsStage("error");
     }
   };
@@ -1893,7 +1915,7 @@ export default function EmployeeDashboard(props: EmployeeDashboardProps) {
   })() : "0h 0m";
 
   // Filter leave requests for this employee
-  const personalLeaves = (leaves || []).filter(
+  const personalLeaves = safeLeaves.filter(
     req => req && (String(req.employee_id) === String(employeeUser?.id) ||
            (employeeUser?.email && req.employee_email === employeeUser.email) ||
            (employeeUser?.name && req.employee_name === employeeUser.name))
@@ -2768,7 +2790,7 @@ export default function EmployeeDashboard(props: EmployeeDashboardProps) {
                   <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
                     <div className="relative group">
                       <img
-                        src={currentEmployeeInDb?.avatar || employeeUser.selfiePreview || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face"}
+                        src={currentEmployeeInDb?.avatar || employeeUser?.selfiePreview || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face"}
                         alt="Active Profile Picture"
                         className="h-16 w-16 rounded-xl object-cover ring-2 ring-slate-800"
                         onError={(e) => {
@@ -2782,8 +2804,8 @@ export default function EmployeeDashboard(props: EmployeeDashboardProps) {
                       </div>
                     </div>
                     <div>
-                      <h3 className="text-sm font-black text-white">{currentEmployeeInDb?.name || employeeUser.name}</h3>
-                      <p className="text-[11px] font-bold text-brand-400 mt-0.5">{currentEmployeeInDb?.role || employeeUser.designation}</p>
+                      <h3 className="text-sm font-black text-white">{currentEmployeeInDb?.name || employeeUser?.name || "Employee"}</h3>
+                      <p className="text-[11px] font-bold text-brand-400 mt-0.5">{currentEmployeeInDb?.role || employeeUser?.designation || "Staff"}</p>
                       <p className="text-[9px] text-slate-500 font-mono mt-0.5 uppercase tracking-wider">Secure Face Anchored</p>
                     </div>
                   </div>
@@ -2794,7 +2816,7 @@ export default function EmployeeDashboard(props: EmployeeDashboardProps) {
                       <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Organization Name</span>
                       <div className="p-2.5 bg-slate-900/40 border border-slate-800 rounded-xl text-xs text-slate-300 flex items-center gap-2">
                         <Building2 className="h-3.5 w-3.5 text-slate-500" />
-                        {systemSettings?.company_name || employeeUser.orgName || "PRESENSIC"}
+                        {systemSettings?.company_name || employeeUser?.orgName || "PRESENSIC"}
                       </div>
                     </div>
 
@@ -2823,7 +2845,7 @@ export default function EmployeeDashboard(props: EmployeeDashboardProps) {
                       <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Email Address</span>
                       <div className="p-2.5 bg-slate-900/40 border border-slate-800 rounded-xl text-xs text-slate-300 flex items-center gap-2">
                         <Mail className="h-3.5 w-3.5 text-slate-500" />
-                        {currentEmployeeInDb?.email || employeeUser.email}
+                        {currentEmployeeInDb?.email || employeeUser?.email}
                       </div>
                     </div>
 
@@ -3180,8 +3202,8 @@ export default function EmployeeDashboard(props: EmployeeDashboardProps) {
         isOpen={isSupportModalOpen}
         onClose={() => setIsSupportModalOpen(false)}
         context={{
-          companyName: employeeUser.orgName || "Unknown Org",
-          raisedBy: `${employeeUser.name} (Employee)`
+          companyName: employeeUser?.orgName || "Unknown Org",
+          raisedBy: `${employeeUser?.name || "Employee"} (Employee)`
         }}
         setTickets={setTickets}
       />
