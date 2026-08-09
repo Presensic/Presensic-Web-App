@@ -22,6 +22,7 @@ import { getSupabase } from "../lib/supabase";
 interface LoginScreenProps {
   onBackToHome: () => void;
   onEnterDashboard: (role: "employer" | "employee", userData?: any) => void;
+  onLoginSuccess?: (user: any) => void;
   employees: any[];
   onOpenRegisterModal: () => void;
   initialTab?: "employee" | "employer";
@@ -30,6 +31,7 @@ interface LoginScreenProps {
 export default function LoginScreen({
   onBackToHome,
   onEnterDashboard,
+  onLoginSuccess,
   employees,
   onOpenRegisterModal,
   initialTab = "employee"
@@ -359,7 +361,11 @@ export default function LoginScreen({
         faceRegistered: !!matchedEmp.face_lock_setup
       };
       localStorage.setItem("presensic_user", JSON.stringify(userPayload));
-      onEnterDashboard("employee", userPayload);
+      if (onLoginSuccess) {
+        onLoginSuccess(userPayload);
+      } else {
+        onEnterDashboard("employee", userPayload);
+      }
     } catch (err: any) {
       console.error("Employee login exception:", err);
       setError("An unexpected error occurred during login.");

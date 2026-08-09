@@ -61,18 +61,20 @@ export default function App() {
     localStorage.setItem("presensic_current_view", currentView);
   }, [currentView]);
 
-  useEffect(() => {
-    if (!currentUser) {
-      setCurrentView("home");
-    }
-  }, [currentUser]);
+  const handleLoginSuccess = (userData: any) => {
+    localStorage.setItem("presensic_user", JSON.stringify(userData));
+    setCurrentUser(userData);
+    const targetView = userData.faceRegistered ? 'employee_dashboard' : 'face_registration';
+    localStorage.setItem("presensic_current_view", targetView);
+    setCurrentView(targetView as any);
+  };
 
   const handleEnterDashboard = (rawRole: "employer" | "employee", userData?: any) => {
     const role = userData?.role || (userData?.isMasterAdmin ? "master_admin" : rawRole);
     const userPayload = { ...(userData || {}), role };
 
-    setCurrentUser(userPayload);
     localStorage.setItem("presensic_user", JSON.stringify(userPayload));
+    setCurrentUser(userPayload);
 
     let targetView = "employee_dashboard";
     if (role === "employer") {
@@ -117,6 +119,7 @@ export default function App() {
             initialTab={loginInitialTab}
             onBackToHome={() => setCurrentView("home")}
             onEnterDashboard={handleEnterDashboard}
+            onLoginSuccess={handleLoginSuccess}
             employees={employees}
             onOpenRegisterModal={() => { setCurrentView("home"); setIsRegisterModalOpen(true); }}
           />
