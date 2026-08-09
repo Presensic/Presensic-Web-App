@@ -17,6 +17,7 @@ import LoginScreen from "./components/LoginScreen";
 
 interface Props { children: React.ReactNode }
 interface State { hasError: boolean, error: any }
+
 class GlobalErrorBoundary extends React.Component<Props, State> {
   props!: Props;
   state = { hasError: false, error: null };
@@ -42,28 +43,23 @@ class GlobalErrorBoundary extends React.Component<Props, State> {
 }
 
 export default function App() {
-  const [currentUser, setCurrentUser] = useState<any>(() => {
+  // Synchronously initialize currentUser state from localStorage
+  const [currentUser, setCurrentUser] = useState(() => {
     try {
       const saved = localStorage.getItem('presensic_user');
       return saved ? JSON.parse(saved) : null;
-    } catch (e) {
+    } catch {
       return null;
     }
   });
 
   const [currentView, setCurrentView] = useState<string>(() => {
-    try {
-      const saved = localStorage.getItem("presensic_current_view");
-      return saved || "home";
-    } catch {
-      return "home";
-    }
+    return localStorage.getItem("presensic_current_view") || "home";
   });
 
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [registerEmployeeCount, setRegisterEmployeeCount] = useState("");
   const [loginInitialTab, setLoginInitialTab] = useState<"employee" | "employer">("employee");
-  const [employeeUser, setEmployeeUser] = useState<any>(null);
   const [employees, setEmployees] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
@@ -75,13 +71,15 @@ export default function App() {
   }, [currentView]);
 
   const handleLoginSuccess = (userData: any) => {
-    const userPayload = userData.role ? userData : { ...userData, role: 'employee' };
+    const userPayload = userData?.role ? userData : { ...userData, role: 'employee' };
     localStorage.setItem("presensic_user", JSON.stringify(userPayload));
     setCurrentUser(userPayload);
+    
     const isEmployer = userPayload.role === 'employer' || (Boolean(userPayload.companyName) && userPayload.role !== 'employee');
     const targetView = isEmployer
       ? 'employer_dashboard' 
       : ((userPayload.faceRegistered || userPayload.face_registered) ? 'employee_dashboard' : 'face_registration');
+      
     localStorage.setItem("presensic_current_view", targetView);
     setCurrentView(targetView);
   };
@@ -100,8 +98,7 @@ export default function App() {
     } else if (role === "master_admin" || userData?.isMasterAdmin) {
       targetView = "master_admin";
     } else {
-      setEmployeeUser(userPayload);
-      targetView = (userPayload.faceRegistered === false && !userPayload.face_registered) ? "face_registration" : "employee_dashboard";
+      targetView = (!userPayload.faceRegistered && !userPayload.face_registered) ? "face_registration" : "employee_dashboard";
     }
     
     localStorage.setItem("presensic_current_view", targetView);
@@ -148,7 +145,7 @@ export default function App() {
               currentUser={currentUser}
               user={currentUser}
               onComplete={(res: any) => {
-                if (res?.faceDetected || res?.skipped) {
+                if (res?.faceDetected || res?.skipped || res?.success) {
                   const updated = { ...currentUser, faceRegistered: true };
                   localStorage.setItem("presensic_user", JSON.stringify(updated));
                   setCurrentUser(updated);
