@@ -10,10 +10,17 @@ interface FaceRegistrationProps {
   employeeName?: string;
 }
 
-export default function FaceRegistration({ onBack, onComplete, employeeName }: FaceRegistrationProps) {
-  if (!employeeName) {
+export default function FaceRegistration(props: any) {
+  const { onBack, onComplete, employeeName } = props;
+  
+  // Prop Normalization
+  const user = props.user || props.currentUser || props.employee || props.userData;
+  const activeUser = user || JSON.parse(localStorage.getItem('presensic_user') || 'null');
+
+  if (!activeUser && !employeeName) {
     return <div className="min-h-screen flex items-center justify-center text-slate-300">Loading user profile...</div>;
   }
+  const employeeNameSafe = employeeName || activeUser?.name || 'Employee';
   const [cameraState, setCameraState] = useState<"initializing" | "active" | "error">("initializing");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [detectionResult, setDetectionResult] = useState<"none" | "one" | "multiple" | null>(null);

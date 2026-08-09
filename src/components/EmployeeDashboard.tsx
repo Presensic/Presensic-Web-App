@@ -132,20 +132,25 @@ async function fetchReverseGeocode(lat: number, lon: number): Promise<string> {
 // Default Geofence Coordinates Fallback
 const OFFICE_COORDS = { lat: 19.0760, lng: 72.8777, radius: 150 };
 
-export default function EmployeeDashboard({
-  onLogOut,
-  employeeUser,
-  setEmployeeUser,
-  employees,
-  setEmployees,
-  logs,
-  setLogs,
-  leaves,
-  setLeaves,
-  companies = [],
-  tickets = [],
-  setTickets = () => {}
-}: EmployeeDashboardProps) {
+export default function EmployeeDashboard(props: any) {
+  const {
+    onLogOut,
+    employeeUser: propEmployeeUser,
+    setEmployeeUser,
+    employees,
+    setEmployees,
+    logs,
+    setLogs,
+    leaves,
+    setLeaves,
+    companies = [],
+    tickets = [],
+    setTickets = () => {}
+  } = props;
+
+  // Prop Normalization
+  const employeeUser = propEmployeeUser || props.user || props.currentUser || JSON.parse(localStorage.getItem('presensic_user') || 'null');
+
   // Check if company trial is expired
   if (!employeeUser) {
     return <div className="min-h-screen flex items-center justify-center text-slate-300">Loading user profile...</div>;
