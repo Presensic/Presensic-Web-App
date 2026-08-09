@@ -34,7 +34,9 @@ export default function App() {
         const parsed = JSON.parse(savedUser);
         if (parsed?.role === "employer") return "employer_dashboard";
         if (parsed?.role === "master_admin") return "master_admin";
-        if (parsed?.role === "employee") return "employee_dashboard";
+        if (parsed?.role === "employee") {
+          return parsed.faceRegistered === false ? "face_registration" : "employee_dashboard";
+        }
       }
       const savedView = localStorage.getItem("presensic_current_view");
       return (savedView as any) || "home";
