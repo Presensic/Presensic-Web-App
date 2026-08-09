@@ -74,6 +74,7 @@ import { useSystemSettings, useAutoLogout, parseEmployeeShiftSettings, stringify
 
 interface EmployerDashboardProps {
   onLogOut: () => void;
+  user?: any;
   employees?: any[];
   setEmployees?: React.Dispatch<React.SetStateAction<any[]>>;
   logs?: any[];
@@ -273,6 +274,7 @@ const mapEmployeeToDB = (uiEmp: any, companyId: any) => {
 
 export default function EmployerDashboard({ 
   onLogOut,
+  user,
   employees: propEmployees,
   setEmployees: propSetEmployees,
   logs: propLogs,
@@ -304,6 +306,7 @@ export default function EmployerDashboard({
   }, []);
   
   const [employerUser, setEmployerUser] = useState<any>(() => {
+    if (user) return user;
     try {
       const savedEmployer = localStorage.getItem("presensic_employer_user");
       if (savedEmployer) {

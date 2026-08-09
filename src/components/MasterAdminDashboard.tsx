@@ -65,11 +65,13 @@ import ExecutiveAnalyticsDashboard from "./ExecutiveAnalyticsDashboard";
 
 interface MasterAdminDashboardProps {
   onLogOut: () => void;
+  user?: any;
 }
 
-export default function MasterAdminDashboard({ onLogOut }: MasterAdminDashboardProps) {
+export default function MasterAdminDashboard({ onLogOut, user }: MasterAdminDashboardProps) {
   // Defense-in-depth mount safeguard
   useEffect(() => {
+    if (user) return; // Prop-based user is trusted
     try {
       const savedEmployer = localStorage.getItem("presensic_employer_user");
       if (savedEmployer) {
@@ -83,7 +85,7 @@ export default function MasterAdminDashboard({ onLogOut }: MasterAdminDashboardP
     } catch (e) {
       onLogOut();
     }
-  }, [onLogOut]);
+  }, [onLogOut, user]);
 
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);

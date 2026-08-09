@@ -88,23 +88,30 @@ export default function App() {
   if (currentUser && currentUser.id) {
     if (currentUser.role === 'employer') {
         return (
-          <EmployerDashboard
-            onLogOut={handleLogOut}
-            employees={employees}
-            setEmployees={setEmployees}
-            logs={logs}
-            setLogs={setLogs}
-            leaves={leaves}
-            setLeaves={setLeaves}
-            companies={companies}
-            setCompanies={setCompanies}
-            tickets={tickets}
-            setTickets={setTickets}
-          />
+          <ErrorBoundary>
+            <EmployerDashboard
+              onLogOut={handleLogOut}
+              user={currentUser}
+              employees={employees}
+              setEmployees={setEmployees}
+              logs={logs}
+              setLogs={setLogs}
+              leaves={leaves}
+              setLeaves={setLeaves}
+              companies={companies}
+              setCompanies={setCompanies}
+              tickets={tickets}
+              setTickets={setTickets}
+            />
+          </ErrorBoundary>
         );
     }
     if (currentUser.role === 'master_admin') {
-        return <MasterAdminDashboard onLogOut={handleLogOut} />;
+        return (
+          <ErrorBoundary>
+            <MasterAdminDashboard onLogOut={handleLogOut} user={currentUser} />
+          </ErrorBoundary>
+        );
     }
     if (!currentUser.faceRegistered) {
       return (
