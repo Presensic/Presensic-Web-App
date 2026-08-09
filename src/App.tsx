@@ -30,16 +30,15 @@ export default function App() {
   >(() => {
     try {
       const savedUser = localStorage.getItem("presensic_user");
-      if (savedUser) {
-        const parsed = JSON.parse(savedUser);
-        if (parsed?.role === "employer") return "employer_dashboard";
-        if (parsed?.role === "master_admin") return "master_admin";
-        if (parsed?.role === "employee") {
-          return parsed.faceRegistered === false ? "face_registration" : "employee_dashboard";
-        }
+      if (!savedUser) return "home";
+      
+      const parsed = JSON.parse(savedUser);
+      if (parsed?.role === "employer") return "employer_dashboard";
+      if (parsed?.role === "master_admin") return "master_admin";
+      if (parsed?.role === "employee") {
+        return parsed.faceRegistered === false ? "face_registration" : "employee_dashboard";
       }
-      const savedView = localStorage.getItem("presensic_current_view");
-      return (savedView as any) || "home";
+      return "home";
     } catch {
       return "home";
     }
