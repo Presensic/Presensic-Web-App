@@ -18,30 +18,17 @@ import LoginScreen from "./components/LoginScreen";
 export default function App() {
   const [currentUser, setCurrentUser] = useState<any>(() => {
     try {
-      const savedUser = localStorage.getItem("presensic_user");
-      return savedUser ? JSON.parse(savedUser) : null;
-    } catch {
+      const saved = localStorage.getItem('presensic_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
       return null;
     }
   });
-  
-  console.log('Current User on Render:', currentUser);
 
-  // Force render check for logged-in users is handled by the initializer below
-  
-  const [currentView, setCurrentView] = useState<
-    "home" | "login" | "employer_dashboard" | "employee_dashboard" | "master_admin" | "face_registration"
-  >(() => {
+  const [currentView, setCurrentView] = useState<string>(() => {
     try {
-      if (currentUser) {
-        if (currentUser.role === "employer") return "employer_dashboard";
-        if (currentUser.role === "master_admin") return "master_admin";
-        if (currentUser.role === "employee") {
-          return currentUser.faceRegistered === false ? "face_registration" : "employee_dashboard";
-        }
-      }
-      const savedView = localStorage.getItem("presensic_current_view");
-      return (savedView as any) || "home";
+      const saved = localStorage.getItem("presensic_current_view");
+      return saved || "home";
     } catch {
       return "home";
     }
@@ -66,7 +53,7 @@ export default function App() {
     setCurrentUser(userData);
     const targetView = userData.faceRegistered ? 'employee_dashboard' : 'face_registration';
     localStorage.setItem("presensic_current_view", targetView);
-    setCurrentView(targetView as any);
+    setCurrentView(targetView);
   };
 
   const handleEnterDashboard = (rawRole: "employer" | "employee", userData?: any) => {
@@ -87,7 +74,7 @@ export default function App() {
     }
     
     localStorage.setItem("presensic_current_view", targetView);
-    setCurrentView(targetView as any);
+    setCurrentView(targetView);
   };
 
   const handleLogOut = () => {
@@ -96,6 +83,60 @@ export default function App() {
     localStorage.removeItem("presensic_current_view");
     setCurrentView("home");
   };
+
+  // Render logic
+  if (currentUser && currentUser.id) {
+    if (currentUser.role === 'employer') {
+        return (
+          <EmployerDashboard
+            onLogOut={handleLogOut}
+            employees={employees}
+            setEmployees={setEmployees}
+            logs={logs}
+            setLogs={setLogs}
+            leaves={leaves}
+            setLeaves={setLeaves}
+            companies={companies}
+            setCompanies={setCompanies}
+            tickets={tickets}
+            setTickets={setTickets}
+          />
+        );
+    }
+    if (currentUser.role === 'master_admin') {
+        return <MasterAdminDashboard onLogOut={handleLogOut} />;
+    }
+    if (!currentUser.faceRegistered) {
+      return (
+        <FaceRegistration 
+          onBack={() => { setCurrentView("home"); setCurrentUser(null); }}
+          currentUser={currentUser}
+          onComplete={(res: any) => {
+            if (res?.faceDetected || res?.skipped) {
+              setCurrentUser({...currentUser, faceRegistered: true});
+              setCurrentView("employee_dashboard");
+            }
+          }}
+        />
+      );
+    }
+    return (
+      <EmployeeDashboard 
+        onLogOut={handleLogOut}
+        employeeUser={currentUser}
+        setEmployeeUser={setCurrentUser}
+        employees={employees}
+        setEmployees={setEmployees}
+        logs={logs}
+        setLogs={setLogs}
+        leaves={leaves}
+        setLeaves={setLeaves}
+        companies={companies}
+        tickets={tickets}
+        setTickets={setTickets}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 font-sans antialiased selection:bg-indigo-500 selection:text-white">
@@ -120,61 +161,11 @@ export default function App() {
             onBackToHome={() => setCurrentView("home")}
             onEnterDashboard={handleEnterDashboard}
             onLoginSuccess={handleLoginSuccess}
-            setView={setCurrentView}
             employees={employees}
             onOpenRegisterModal={() => { setCurrentView("home"); setIsRegisterModalOpen(true); }}
           />
         )}
-
-        {currentView === "employer_dashboard" && (
-          <EmployerDashboard
-            onLogOut={handleLogOut}
-            employees={employees}
-            setEmployees={setEmployees}
-            logs={logs}
-            setLogs={setLogs}
-            leaves={leaves}
-            setLeaves={setLeaves}
-            companies={companies}
-            setCompanies={setCompanies}
-            tickets={tickets}
-            setTickets={setTickets}
-          />
-        )}
-
-        {currentView === "employee_dashboard" && (
-          <EmployeeDashboard
-            onLogOut={handleLogOut}
-            employeeUser={employeeUser}
-            setEmployeeUser={setEmployeeUser}
-            employees={employees}
-            setEmployees={setEmployees}
-            logs={logs}
-            setLogs={setLogs}
-            leaves={leaves}
-            setLeaves={setLeaves}
-            companies={companies}
-            tickets={tickets}
-            setTickets={setTickets}
-          />
-        )}
-
-        {currentView === "master_admin" && <MasterAdminDashboard onLogOut={handleLogOut} />}
-
-        {currentView === "face_registration" && (
-          <FaceRegistration
-            onBack={() => setCurrentView("employee_dashboard")}
-            employeeName={employeeUser?.name || "Employee"}
-            onComplete={(res) => {
-              if (res?.faceDetected) {
-                setCurrentView("employee_dashboard");
-              } else if (res?.skipped) {
-                setCurrentView("employee_dashboard");
-              }
-            }}
-          />
-        )}
-
+        
         {isRegisterModalOpen && (
           <RegistrationModal
             isOpen={isRegisterModalOpen}
