@@ -275,8 +275,8 @@ export default function LoginScreen({
     }
   };
 
-  const handleEmployeeSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleEmployeeSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setError("");
 
     if (!employeeId.trim()) {
@@ -379,8 +379,8 @@ export default function LoginScreen({
     }
   };
 
-  const handleEmployerSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleEmployerSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setError("");
 
     const supabase = getSupabase();
@@ -635,7 +635,7 @@ export default function LoginScreen({
           {/* Forms switcher with animate presence or direct conditions */}
           <div>
             {activeTab === "employee" ? (
-              <div className="space-y-4" id="form-employee-portal">
+              <form onSubmit={handleEmployeeSubmit} className="space-y-4" id="form-employee-portal">
                 {/* ID Input */}
                 <div className="space-y-1.5">
                   <label htmlFor="employeeId" className="text-xs font-bold text-slate-700 block">
@@ -697,8 +697,7 @@ export default function LoginScreen({
 
                 {/* Log In Button */}
                 <button
-                  type="button"
-                  onClick={(e) => { e.preventDefault(); handleEmployeeSubmit(e as any); }}
+                  type="submit"
                   className="w-full py-3 px-4 bg-slate-900 hover:bg-slate-850 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer mt-2"
                   id="btn-employee-login"
                 >
@@ -732,9 +731,9 @@ export default function LoginScreen({
                     </motion.button>
                   </div>
                 </div>
-              </div>
+              </form>
             ) : (
-              <div className="space-y-4" id="form-employer-portal">
+              <form onSubmit={handleEmployerSubmit} className="space-y-4" id="form-employer-portal">
                 {/* WhatsApp Input */}
                 <div className="space-y-1.5">
                   <label htmlFor="adminEmail" className="text-xs font-bold text-slate-700 block">
@@ -794,8 +793,7 @@ export default function LoginScreen({
 
                 {/* Log In Button */}
                 <button
-                  type="button"
-                  onClick={(e) => { e.preventDefault(); handleEmployerSubmit(e as any); }}
+                  type="submit"
                   className="w-full py-3 px-4 bg-slate-900 hover:bg-slate-850 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer mt-2"
                   id="btn-employer-login"
                 >
@@ -829,7 +827,7 @@ export default function LoginScreen({
                     </motion.button>
                   </div>
                 </div>
-              </div>
+              </form>
             )}
           </div>
         </motion.div>
