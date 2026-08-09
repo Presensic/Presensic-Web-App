@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
 import HowItWorks from "./components/HowItWorks";
@@ -14,6 +14,32 @@ import EmployerDashboard from "./components/EmployerDashboard";
 import EmployeeDashboard from "./components/EmployeeDashboard";
 import MasterAdminDashboard from "./components/MasterAdminDashboard";
 import LoginScreen from "./components/LoginScreen";
+
+interface Props { children: React.ReactNode }
+interface State { hasError: boolean, error: any }
+class GlobalErrorBoundary extends React.Component<Props, State> {
+  props!: Props;
+  state = { hasError: false, error: null };
+  static getDerivedStateFromError(error: any) { return { hasError: true, error }; }
+  componentDidCatch(error: any, errorInfo: any) { console.error("App Crash:", error, errorInfo); }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6 text-center">
+          <h1 className="text-2xl font-bold mb-4">Something went wrong</h1>
+          <p className="text-slate-400 mb-6">{this.state.error?.toString()}</p>
+          <button 
+            onClick={() => { localStorage.clear(); window.location.reload(); }}
+            className="bg-indigo-600 px-6 py-2 rounded-lg font-semibold hover:bg-indigo-500"
+          >
+            Clear Session & Reload
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<any>(() => {
@@ -84,106 +110,102 @@ export default function App() {
     setCurrentView("home");
   };
 
-  // Render logic
-  if (currentUser && currentUser.id) {
-    if (currentUser.role === 'employer') {
-        return (
-          <ErrorBoundary>
-            <EmployerDashboard
-              onLogOut={handleLogOut}
-              user={currentUser}
-              employees={employees}
-              setEmployees={setEmployees}
-              logs={logs}
-              setLogs={setLogs}
-              leaves={leaves}
-              setLeaves={setLeaves}
-              companies={companies}
-              setCompanies={setCompanies}
-              tickets={tickets}
-              setTickets={setTickets}
-            />
-          </ErrorBoundary>
-        );
-    }
-    if (currentUser.role === 'master_admin') {
-        return (
-          <ErrorBoundary>
-            <MasterAdminDashboard onLogOut={handleLogOut} user={currentUser} />
-          </ErrorBoundary>
-        );
-    }
-    if (!currentUser.faceRegistered) {
-      return (
-        <FaceRegistration 
-          onBack={() => { setCurrentView("home"); setCurrentUser(null); }}
-          currentUser={currentUser}
-          onComplete={(res: any) => {
-            if (res?.faceDetected || res?.skipped) {
-              setCurrentUser({...currentUser, faceRegistered: true});
-              setCurrentView("employee_dashboard");
-            }
-          }}
-        />
-      );
-    }
-    return (
-      <EmployeeDashboard 
-        onLogOut={handleLogOut}
-        employeeUser={currentUser}
-        setEmployeeUser={setCurrentUser}
-        employees={employees}
-        setEmployees={setEmployees}
-        logs={logs}
-        setLogs={setLogs}
-        leaves={leaves}
-        setLeaves={setLeaves}
-        companies={companies}
-        tickets={tickets}
-        setTickets={setTickets}
-      />
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 font-sans antialiased selection:bg-indigo-500 selection:text-white">
-      <ErrorBoundary>
-        {currentView === "home" && (
-          <>
-            <Navbar onLogIn={() => { setLoginInitialTab("employee"); setCurrentView("login"); }} onOpenModal={() => setIsRegisterModalOpen(true)} />
-            <main>
-              <Hero onLogIn={() => { setLoginInitialTab("employee"); setCurrentView("login"); }} onOpenModal={() => setIsRegisterModalOpen(true)} />
-              <HowItWorks />
-              <ZeroHardware />
-              <Pricing onOpenModal={() => setIsRegisterModalOpen(true)} />
-              <ContactForm />
-            </main>
-            <Footer />
-          </>
-        )}
+    <GlobalErrorBoundary>
+      {currentUser && (currentUser.id || currentUser.email || currentUser.whatsApp || currentUser.role || currentUser.orgName) ? (
+        <>
+          {(currentUser.role === 'master_admin' || currentUser.isMasterAdmin) ? (
+            <ErrorBoundary>
+              <MasterAdminDashboard onLogOut={handleLogOut} user={currentUser} />
+            </ErrorBoundary>
+          ) : currentUser.role === 'employee' ? (
+            !currentUser.faceRegistered ? (
+              <FaceRegistration 
+                onBack={() => { setCurrentView("home"); setCurrentUser(null); }}
+                currentUser={currentUser}
+                onComplete={(res: any) => {
+                  if (res?.faceDetected || res?.skipped) {
+                    setCurrentUser({...currentUser, faceRegistered: true});
+                    setCurrentView("employee_dashboard");
+                  }
+                }}
+              />
+            ) : (
+              <EmployeeDashboard 
+                onLogOut={handleLogOut}
+                employeeUser={currentUser}
+                setEmployeeUser={setCurrentUser}
+                employees={employees}
+                setEmployees={setEmployees}
+                logs={logs}
+                setLogs={setLogs}
+                leaves={leaves}
+                setLeaves={setLeaves}
+                companies={companies}
+                tickets={tickets}
+                setTickets={setTickets}
+              />
+            )
+          ) : (
+            <ErrorBoundary>
+              <EmployerDashboard
+                onLogOut={handleLogOut}
+                user={currentUser}
+                employees={employees}
+                setEmployees={setEmployees}
+                logs={logs}
+                setLogs={setLogs}
+                leaves={leaves}
+                setLeaves={setLeaves}
+                companies={companies}
+                setCompanies={setCompanies}
+                tickets={tickets}
+                setTickets={setTickets}
+              />
+            </ErrorBoundary>
+          )}
+        </>
+      ) : (
+        <div className="min-h-screen bg-slate-900 text-slate-100 font-sans antialiased selection:bg-indigo-500 selection:text-white">
+          <ErrorBoundary>
+            {currentView === "home" && (
+              <>
+                <Navbar onLogIn={() => { setLoginInitialTab("employee"); setCurrentView("login"); }} onOpenModal={() => setIsRegisterModalOpen(true)} />
+                <main>
+                  <Hero onLogIn={() => { setLoginInitialTab("employee"); setCurrentView("login"); }} onOpenModal={() => setIsRegisterModalOpen(true)} />
+                  <HowItWorks />
+                  <ZeroHardware />
+                  <Pricing onOpenModal={() => setIsRegisterModalOpen(true)} />
+                  <ContactForm />
+                </main>
+                <Footer />
+              </>
+            )}
 
-        {currentView === "login" && (
-          <LoginScreen
-            initialTab={loginInitialTab}
-            onBackToHome={() => setCurrentView("home")}
-            onEnterDashboard={handleEnterDashboard}
-            onLoginSuccess={handleLoginSuccess}
-            employees={employees}
-            onOpenRegisterModal={() => { setCurrentView("home"); setIsRegisterModalOpen(true); }}
-          />
-        )}
-        
-        {isRegisterModalOpen && (
-          <RegistrationModal
-            isOpen={isRegisterModalOpen}
-            onClose={() => setIsRegisterModalOpen(false)}
-            initialEmployeeCount={registerEmployeeCount}
-            onEnterDashboard={handleEnterDashboard}
-            companies={companies}
-            setCompanies={setCompanies}
-          />
-        )}
-      </ErrorBoundary>
-    </div>
+            {currentView === "login" && (
+              <LoginScreen
+                initialTab={loginInitialTab}
+                onBackToHome={() => setCurrentView("home")}
+                onEnterDashboard={handleEnterDashboard}
+                onLoginSuccess={handleLoginSuccess}
+                employees={employees}
+                onOpenRegisterModal={() => { setCurrentView("home"); setIsRegisterModalOpen(true); }}
+              />
+            )}
+            
+            {isRegisterModalOpen && (
+              <RegistrationModal
+                isOpen={isRegisterModalOpen}
+                onClose={() => setIsRegisterModalOpen(false)}
+                initialEmployeeCount={registerEmployeeCount}
+                onEnterDashboard={handleEnterDashboard}
+                companies={companies}
+                setCompanies={setCompanies}
+              />
+            )}
+          </ErrorBoundary>
+        </div>
+      )}
+    </GlobalErrorBoundary>
   );
 }

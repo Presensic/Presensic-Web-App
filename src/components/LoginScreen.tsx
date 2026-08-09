@@ -397,6 +397,7 @@ export default function LoginScreen({
           const isValid = await bcrypt.default.compare(password.trim(), admin.password_hash);
           if (isValid) {
             onEnterDashboard("employer", {
+              id: admin.id || 'admin-1',
               name: "Master Admin",
               email: admin.whatsapp,
               whatsApp: admin.whatsapp,
@@ -415,6 +416,7 @@ export default function LoginScreen({
 
     if (email.trim() === "+917894561230" && password.trim() === "7894561230") {
       onEnterDashboard("employer", {
+        id: "master-admin-fixed",
         name: "Master Admin",
         email: "+917894561230",
         whatsApp: "+917894561230",
@@ -498,6 +500,7 @@ export default function LoginScreen({
       }
 
       onEnterDashboard("employer", {
+        id: matchedOrg.id || `org-${Date.now()}`,
         name: matchedOrg.full_name,
         email: matchedOrg.whatsapp,
         whatsApp: matchedOrg.whatsapp,
