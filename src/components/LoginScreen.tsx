@@ -361,6 +361,7 @@ export default function LoginScreen({
         faceRegistered: !!matchedEmp.face_lock_setup
       };
       localStorage.setItem("presensic_user", JSON.stringify(userPayload));
+      console.log('SAVED TO LOCALSTORAGE:', localStorage.getItem('presensic_user'));
       if (onLoginSuccess) {
         onLoginSuccess(userPayload);
       } else {
