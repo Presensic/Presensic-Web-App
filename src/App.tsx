@@ -75,10 +75,11 @@ export default function App() {
   }, [currentView]);
 
   const handleLoginSuccess = (userData: any) => {
-    const userPayload = userData.role ? userData : { ...userData, role: (userData.companyName || userData.orgName || userData.org_name) ? 'employer' : 'employee' };
+    const userPayload = userData.role ? userData : { ...userData, role: 'employee' };
     localStorage.setItem("presensic_user", JSON.stringify(userPayload));
     setCurrentUser(userPayload);
-    const targetView = (userPayload.role === 'employer' || userPayload.companyName || userPayload.orgName || userPayload.org_name)
+    const isEmployer = userPayload.role === 'employer' || (Boolean(userPayload.companyName) && userPayload.role !== 'employee');
+    const targetView = isEmployer
       ? 'employer_dashboard' 
       : ((userPayload.faceRegistered || userPayload.face_registered) ? 'employee_dashboard' : 'face_registration');
     localStorage.setItem("presensic_current_view", targetView);
@@ -93,7 +94,8 @@ export default function App() {
     setCurrentUser(userPayload);
 
     let targetView = "employee_dashboard";
-    if (role === "employer" || userPayload.companyName || userPayload.orgName || userPayload.org_name) {
+    const isEmployer = role === 'employer' || (Boolean(userPayload.companyName) && role !== 'employee');
+    if (isEmployer) {
       targetView = "employer_dashboard";
     } else if (role === "master_admin" || userData?.isMasterAdmin) {
       targetView = "master_admin";

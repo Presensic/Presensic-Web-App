@@ -635,7 +635,7 @@ export default function LoginScreen({
           {/* Forms switcher with animate presence or direct conditions */}
           <div>
             {activeTab === "employee" ? (
-              <form onSubmit={handleEmployeeSubmit} className="space-y-4" id="form-employee-portal">
+              <div className="space-y-4" id="form-employee-portal">
                 {/* ID Input */}
                 <div className="space-y-1.5">
                   <label htmlFor="employeeId" className="text-xs font-bold text-slate-700 block">
@@ -651,6 +651,12 @@ export default function LoginScreen({
                       placeholder="e.g. EMP-001"
                       value={employeeId}
                       onChange={(e) => setEmployeeId(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleEmployeeSubmit();
+                        }
+                      }}
                       className="w-full pl-10 pr-4 py-2.5 bg-slate-50/50 border border-slate-200 hover:border-slate-300 focus:border-brand-500 focus:bg-white text-xs font-medium text-slate-900 rounded-xl outline-none transition-all placeholder:text-slate-400"
                     />
                   </div>
@@ -673,6 +679,12 @@ export default function LoginScreen({
                       placeholder="••••"
                       value={pin}
                       onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleEmployeeSubmit();
+                        }
+                      }}
                       className="w-full pl-10 pr-10 py-2.5 bg-slate-50/50 border border-slate-200 hover:border-slate-300 focus:border-brand-500 focus:bg-white text-xs font-bold tracking-widest text-slate-900 rounded-xl outline-none transition-all placeholder:text-slate-400"
                     />
                     <button
@@ -697,7 +709,12 @@ export default function LoginScreen({
 
                 {/* Log In Button */}
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleEmployeeSubmit();
+                  }}
                   className="w-full py-3 px-4 bg-slate-900 hover:bg-slate-850 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer mt-2"
                   id="btn-employee-login"
                 >
@@ -731,9 +748,9 @@ export default function LoginScreen({
                     </motion.button>
                   </div>
                 </div>
-              </form>
+              </div>
             ) : (
-              <form onSubmit={handleEmployerSubmit} className="space-y-4" id="form-employer-portal">
+              <div className="space-y-4" id="form-employer-portal">
                 {/* WhatsApp Input */}
                 <div className="space-y-1.5">
                   <label htmlFor="adminEmail" className="text-xs font-bold text-slate-700 block">
@@ -749,6 +766,12 @@ export default function LoginScreen({
                       placeholder="e.g. +91 98765 43210"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleEmployerSubmit();
+                        }
+                      }}
                       className="w-full pl-10 pr-4 py-2.5 bg-slate-50/50 border border-slate-200 hover:border-slate-300 focus:border-brand-500 focus:bg-white text-xs font-medium text-slate-900 rounded-xl outline-none transition-all placeholder:text-slate-400"
                     />
                   </div>
@@ -769,6 +792,12 @@ export default function LoginScreen({
                       placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleEmployerSubmit();
+                        }
+                      }}
                       className="w-full pl-10 pr-10 py-2.5 bg-slate-50/50 border border-slate-200 hover:border-slate-300 focus:border-brand-500 focus:bg-white text-xs font-medium text-slate-900 rounded-xl outline-none transition-all placeholder:text-slate-400"
                     />
                     <button
@@ -793,7 +822,12 @@ export default function LoginScreen({
 
                 {/* Log In Button */}
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleEmployerSubmit();
+                  }}
                   className="w-full py-3 px-4 bg-slate-900 hover:bg-slate-850 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer mt-2"
                   id="btn-employer-login"
                 >
@@ -827,7 +861,7 @@ export default function LoginScreen({
                     </motion.button>
                   </div>
                 </div>
-              </form>
+              </div>
             )}
           </div>
         </motion.div>
