@@ -56,26 +56,34 @@ import {
 import { useAttendance } from "../hooks/useAttendance";
 
 interface EmployeeDashboardProps {
-  onLogOut: () => void;
-  employeeUser: {
-    id?: string;
-    name: string;
-    email: string;
+  onLogOut?: () => void;
+  onLogout?: () => void;
+  employeeUser?: {
+    id?: string | number;
+    name?: string;
+    email?: string;
     whatsApp?: string;
-    orgName: string;
+    orgName?: string;
     orgType?: string;
-    designation: string;
-    selfiePreview: string | null;
+    designation?: string;
+    selfiePreview?: string | null;
     avatar?: string;
-    companyId?: number;
-  };
+    companyId?: number | string;
+    role?: string;
+    faceRegistered?: boolean;
+    face_registered?: boolean;
+    faceLockSetup?: boolean;
+    isDeactivated?: boolean;
+  } | null;
+  user?: any;
+  currentUser?: any;
   setEmployeeUser?: React.Dispatch<React.SetStateAction<any>>;
-  employees: any[];
-  setEmployees: React.Dispatch<React.SetStateAction<any[]>>;
-  logs: any[];
-  setLogs: React.Dispatch<React.SetStateAction<any[]>>;
-  leaves: LeaveRequest[];
-  setLeaves: React.Dispatch<React.SetStateAction<LeaveRequest[]>>;
+  employees?: any[];
+  setEmployees?: React.Dispatch<React.SetStateAction<any[]>>;
+  logs?: any[];
+  setLogs?: React.Dispatch<React.SetStateAction<any[]>>;
+  leaves?: LeaveRequest[];
+  setLeaves?: React.Dispatch<React.SetStateAction<LeaveRequest[]>>;
   companies?: any[];
   tickets?: any[];
   setTickets?: React.Dispatch<React.SetStateAction<any[]>>;
@@ -132,35 +140,43 @@ async function fetchReverseGeocode(lat: number, lon: number): Promise<string> {
 // Default Geofence Coordinates Fallback
 const OFFICE_COORDS = { lat: 19.0760, lng: 72.8777, radius: 150 };
 
-export default function EmployeeDashboard(props: any) {
+export default function EmployeeDashboard(props: EmployeeDashboardProps) {
   const {
-    onLogOut,
-    employeeUser: propEmployeeUser,
-    setEmployeeUser,
-    employees,
-    setEmployees,
-    logs,
-    setLogs,
-    leaves,
-    setLeaves,
+    onLogOut = () => { localStorage.clear(); window.location.reload(); },
+    onLogout = () => { localStorage.clear(); window.location.reload(); },
+    employeeUser: propEmployeeUser = null,
+    setEmployeeUser = () => {},
+    employees = [],
+    setEmployees = () => {},
+    logs = [],
+    setLogs = () => {},
+    leaves = [],
+    setLeaves = () => {},
     companies = [],
     tickets = [],
     setTickets = () => {}
   } = props;
 
   // Prop Normalization
-  const employeeUser = propEmployeeUser || props.user || props.currentUser || JSON.parse(localStorage.getItem('presensic_user') || 'null');
+  const employeeUser = propEmployeeUser || props.user || props.currentUser || (() => {
+    try {
+      const saved = localStorage.getItem('presensic_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  })();
 
   // Check if company trial is expired
   if (!employeeUser) {
     return <div className="min-h-screen flex items-center justify-center text-slate-300">Loading user profile...</div>;
   }
 
-  const currentCompany = companies.find(c => c.name === employeeUser.orgName || String(c.id) === String(employeeUser?.companyId ?? (employeeUser as any)?.company_id ?? '')) || { status: "Trial Active", created_at: new Date().toISOString() };
+  const currentCompany = (companies || []).find(c => c && (c.name === employeeUser?.orgName || String(c.id) === String(employeeUser?.companyId ?? (employeeUser as any)?.company_id ?? ''))) || { status: "Trial Active", created_at: new Date().toISOString() };
   const trialCalc = calculateTrialStatus(
-    currentCompany.created_at || currentCompany.registered_at,
-    currentCompany.status,
-    currentCompany.plan
+    currentCompany?.created_at || currentCompany?.registered_at,
+    currentCompany?.status,
+    currentCompany?.plan
   );
   const isGated = trialCalc.isGated;
 
@@ -169,7 +185,14 @@ export default function EmployeeDashboard(props: any) {
     try {
       const savedEE = localStorage.getItem("presensic_employee_user");
       const savedEmp = localStorage.getItem("presensic_employer_user");
-      if (!savedEE && (!savedEmp || (!JSON.parse(savedEmp).isMasterAdmin && JSON.parse(savedEmp).role !== "master_admin"))) {
+      if (!savedEE && (!savedEmp || (() => {
+        try {
+          const parsed = JSON.parse(savedEmp);
+          return !parsed?.isMasterAdmin && parsed?.role !== "master_admin";
+        } catch {
+          return true;
+        }
+      })())) {
         onLogOut();
       }
     } catch (e) {
@@ -231,8 +254,8 @@ export default function EmployeeDashboard(props: any) {
   
 
   // Sync state for this specific employee from the general employees list
-  const currentEmployeeInDb = employees.find(
-    e => (employeeUser.id && e.id === employeeUser.id) || e.email?.toLowerCase() === employeeUser.email?.toLowerCase() || e.name === employeeUser.name
+  const currentEmployeeInDb = (employees || []).find(
+    e => e && ((employeeUser?.id && String(e.id) === String(employeeUser.id)) || (employeeUser?.email && e.email?.toLowerCase() === employeeUser.email.toLowerCase()) || (employeeUser?.name && e.name === employeeUser.name))
   );
 
   const activeCompanyId = currentEmployeeInDb?.companyId ?? (currentEmployeeInDb as any)?.company_id ?? employeeUser?.companyId ?? (employeeUser as any)?.company_id ?? currentCompany?.id;
@@ -431,19 +454,20 @@ export default function EmployeeDashboard(props: any) {
 
   // Fallback / initialization for this employee in db if not exists
   useEffect(() => {
-    if (!currentEmployeeInDb) {
+    if (!currentEmployeeInDb && employeeUser) {
       setEmployees(prev => {
-        const exists = prev.some(
-          e => (employeeUser.id && e.id === employeeUser.id) || e.email?.toLowerCase() === employeeUser.email?.toLowerCase() || e.name === employeeUser.name
+        const prevArr = prev || [];
+        const exists = prevArr.some(
+          e => e && ((employeeUser.id && String(e.id) === String(employeeUser.id)) || (employeeUser.email && e.email?.toLowerCase() === employeeUser.email.toLowerCase()) || (employeeUser.name && e.name === employeeUser.name))
         );
-        if (exists) return prev;
+        if (exists) return prevArr;
 
         const newEmp = {
-          id: `EMP-${100 + prev.length + 1}`,
-          name: employeeUser.name,
-          role: employeeUser.designation,
+          id: `EMP-${100 + prevArr.length + 1}`,
+          name: employeeUser.name || "Employee",
+          role: employeeUser.designation || "Operations",
           department: "Operations",
-          email: employeeUser.email,
+          email: employeeUser.email || "",
           phone: employeeUser.whatsApp || "+91 98765 00000",
           zone: activeGeofence?.name || "Assigned Location",
           status: "Absent" as const,
@@ -456,7 +480,7 @@ export default function EmployeeDashboard(props: any) {
           officeCoords: OFFICE_COORDS,
           companyId: employeeUser?.companyId ?? (employeeUser as any)?.company_id ?? ''
         };
-        return [newEmp, ...prev];
+        return [newEmp, ...prevArr];
       });
     }
   }, [currentEmployeeInDb, employeeUser, setEmployees]);
@@ -474,18 +498,21 @@ export default function EmployeeDashboard(props: any) {
   // Derived attendance status from todayLogsChrono directly
   const actualAttendanceStatus = useMemo(() => {
     if (isAttendanceLoading) return null; // Loading
-    if (todayLogsChrono.length === 0) return "not_checked_in";
-    const lastLog = todayLogsChrono[todayLogsChrono.length - 1];
-    return lastLog.attendance_type === "Check Out" ? "checked_out" : "checked_in";
+    const logsArr = todayLogsChrono || [];
+    if (logsArr.length === 0) return "not_checked_in";
+    const lastLog = logsArr[logsArr.length - 1];
+    return lastLog?.attendance_type === "Check Out" ? "checked_out" : "checked_in";
   }, [todayLogsChrono, isAttendanceLoading]);
 
   const actualCheckInTime = useMemo(() => {
-    const checkInLog = todayLogsChrono.find(l => l.attendance_type === "Check In");
+    const logsArr = todayLogsChrono || [];
+    const checkInLog = logsArr.find(l => l && l.attendance_type === "Check In");
     return checkInLog ? checkInLog.time : null;
   }, [todayLogsChrono]);
 
   const actualCheckOutTime = useMemo(() => {
-    const checkOutLog = todayLogsChrono.find(l => l.attendance_type === "Check Out");
+    const logsArr = todayLogsChrono || [];
+    const checkOutLog = logsArr.find(l => l && l.attendance_type === "Check Out");
     return checkOutLog ? checkOutLog.time : null;
   }, [todayLogsChrono]);
 
@@ -496,17 +523,19 @@ export default function EmployeeDashboard(props: any) {
   const todayDateStr = now.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
 
 
-  const todayCheckIns = todayLogsChrono.filter(l => isCheckInLog(l) && l.status !== "failed" && !l.method?.includes("Rejected"));
-  const todayCheckOuts = todayLogsChrono.filter(l => isCheckOutLog(l) && l.status !== "failed" && !l.method?.includes("Rejected"));
+  const todayCheckIns = (todayLogsChrono || []).filter(l => l && isCheckInLog(l) && l.status !== "failed" && !l.method?.includes("Rejected"));
+  const todayCheckOuts = (todayLogsChrono || []).filter(l => l && isCheckOutLog(l) && l.status !== "failed" && !l.method?.includes("Rejected"));
 
   const calculationBreakdown = useMemo(() => {
-    if (todayCheckIns.length === 0) return null;
+    const ins = todayCheckIns || [];
+    const outs = todayCheckOuts || [];
+    if (ins.length === 0) return null;
     
-    const earliestLog = todayCheckIns[0];
-    const latestOutLog = todayCheckOuts.length > 0 ? todayCheckOuts[todayCheckOuts.length - 1] : null;
+    const earliestLog = ins[0];
+    const latestOutLog = outs.length > 0 ? outs[outs.length - 1] : null;
     
-    const startTime = parseTimeToDate(earliestLog.time);
-    const endTime = isLoggedIn ? new Date() : (latestOutLog ? parseTimeToDate(latestOutLog.time) : null);
+    const startTime = earliestLog?.time ? parseTimeToDate(earliestLog.time) : null;
+    const endTime = isLoggedIn ? new Date() : (latestOutLog?.time ? parseTimeToDate(latestOutLog.time) : null);
     
     if (!startTime) return null;
     
@@ -522,21 +551,21 @@ export default function EmployeeDashboard(props: any) {
       startTime,
       endTime,
       totalHoursStr: `${h}h ${m}m`,
-      records: todayLogsChrono.filter(l => l.status !== "failed" && !l.method?.includes("Rejected"))
+      records: (todayLogsChrono || []).filter(l => l && l.status !== "failed" && !l.method?.includes("Rejected"))
     };
   }, [todayCheckIns, todayCheckOuts, isLoggedIn, todayLogsChrono]);
 
-  const checkInTimeRaw = todayCheckIns.length > 0 ? todayCheckIns[0].time : "—";
+  const checkInTimeRaw = (todayCheckIns || []).length > 0 ? todayCheckIns[0]?.time : "—";
   const checkInTime = formatDisplayTime(checkInTimeRaw);
 
   // Only show Out Time if the user is NOT currently checked in (i.e., the session is closed)
   // This prevents pairing an old session's Out Time with a new session's In Time
-  const checkOutTimeRaw = (!isLoggedIn && todayCheckOuts.length > 0) ? todayCheckOuts[todayCheckOuts.length - 1].time : "—";
+  const checkOutTimeRaw = (!isLoggedIn && (todayCheckOuts || []).length > 0) ? todayCheckOuts[todayCheckOuts.length - 1]?.time : "—";
   const checkOutTime = formatDisplayTime(checkOutTimeRaw);
 
   const hasCheckedInToday = checkInTime !== "—" && checkInTime !== null && checkInTime !== undefined && checkInTime !== "";
   const hasCheckedOutToday = checkOutTime !== "—" && checkOutTime !== "null" && checkOutTime !== null && checkOutTime !== undefined && checkOutTime !== "";
-  const hasAttendanceToday = todayLogs.length > 0 || hasCheckedInToday || hasCheckedOutToday;
+  const hasAttendanceToday = (todayLogs || []).length > 0 || hasCheckedInToday || hasCheckedOutToday;
 
   // Compute Check-In Status Label
   let statusBadgeLabel = "Not Checked In";
@@ -585,9 +614,10 @@ export default function EmployeeDashboard(props: any) {
         .order('id', { ascending: false });
       if (!error && data) {
         setLeaves(prev => {
+          const prevArr = prev || [];
           // Merge leaves without losing other employees leaves (if any in global state)
-          const otherLeaves = prev.filter(l => String(l.employee_id) !== String(employeeUser.id));
-          return [...data, ...otherLeaves];
+          const otherLeaves = prevArr.filter(l => l && String(l.employee_id) !== String(employeeUser?.id));
+          return [...(data || []), ...otherLeaves];
         });
       }
     };
@@ -935,7 +965,7 @@ export default function EmployeeDashboard(props: any) {
     const totalDays = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1);
 
     const companyId = currentEmployeeInDb?.companyId ?? (currentEmployeeInDb as any)?.company_id ?? employeeUser?.companyId ?? (employeeUser as any)?.company_id ?? '';
-    const employeeId = employeeUser.id;
+    const employeeId = employeeUser?.id || '';
 
     console.log("CURRENT COMPANY ID:", companyId);
     console.log("CURRENT EMPLOYEE ID:", employeeId);
@@ -943,8 +973,8 @@ export default function EmployeeDashboard(props: any) {
     const newRequest = {
       company_id: companyId,
       employee_id: employeeId,
-      employee_name: employeeUser.name,
-      employee_email: employeeUser.email,
+      employee_name: employeeUser?.name || "Employee",
+      employee_email: employeeUser?.email || "",
       leave_type: leaveType,
       reason: leaveReason,
       start_date: startDate,
@@ -983,7 +1013,7 @@ export default function EmployeeDashboard(props: any) {
       } as LeaveRequest;
     }
 
-    setLeaves(prev => [createdItem!, ...prev.filter(l => l.id !== createdItem!.id)]);
+    setLeaves(prev => [createdItem!, ...(prev || []).filter(l => l && l.id !== createdItem!.id)]);
 
     setIsLeaveFormOpen(false);
     setStartDate("");
@@ -1407,8 +1437,8 @@ export default function EmployeeDashboard(props: any) {
     const coordinatesStr = `${finalDetectedCoords.lat.toFixed(6)}, ${finalDetectedCoords.lng.toFixed(6)}${address ? `|${address}` : (activeGeofence ? `|${activeGeofence.name}` : '')}`;
 
     // 1. Update general employees list state
-    setEmployees(prev => prev.map(e => {
-      if (e.email?.toLowerCase() === employeeUser.email?.toLowerCase() || e.id === currentEmployeeInDb?.id || e.name === employeeUser.name) {
+    setEmployees(prev => (prev || []).map(e => {
+      if (e && (e.email?.toLowerCase() === employeeUser?.email?.toLowerCase() || e.id === currentEmployeeInDb?.id || e.name === employeeUser?.name)) {
         return {
           ...e,
           status: statusResult as any,
@@ -1426,9 +1456,9 @@ export default function EmployeeDashboard(props: any) {
     // 2. Register global audit log
     const newAuditLog = {
       id: `LOG-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      employee_id: currentEmployeeInDb?.id || employeeUser.id,
-      employee: employeeUser.name,
-      role: employeeUser.designation,
+      employee_id: currentEmployeeInDb?.id || employeeUser?.id,
+      employee: employeeUser?.name || "Employee",
+      role: employeeUser?.designation || "Operations",
       zone: activeGeofence ? (isLowAccuracy ? "Unverified Location" : (isWithinGeofence ? activeGeofence.name : "Field Location")) : "No Geofence Assigned",
       time: timeStr,
       date: todayDateStr,
@@ -1443,10 +1473,10 @@ export default function EmployeeDashboard(props: any) {
       faceVerification: faceFailed ? "Failed" : "Verified",
       method: hasFaceVerificationError ? "Pending Manual Review — Face Verification Unavailable" : (hasFaceMismatchBypass ? `Face Mismatch - Punch Allowed${lastMatchDistance !== null ? ` (Dist: ${lastMatchDistance.toFixed(3)})` : ''}` : (punchType === "in" ? `Face Match Check-In${lastMatchDistance !== null ? ` (Dist: ${lastMatchDistance.toFixed(3)}, Threshold: 0.50)` : ''}` : `Face Match Check-Out${lastMatchDistance !== null ? ` (Dist: ${lastMatchDistance.toFixed(3)}, Threshold: 0.50)` : ''}`)),
       attendance_type: punchType === "in" ? "Check In" : "Check Out",
-      avatar: verificationPhoto || employeeUser.selfiePreview || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face"
+      avatar: verificationPhoto || employeeUser?.selfiePreview || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face"
     };
-    setPersonalLogs(prev => [newAuditLog, ...prev]);
-    setLogs(prev => [newAuditLog, ...prev]);
+    setPersonalLogs(prev => [newAuditLog, ...(prev || [])]);
+    setLogs(prev => [newAuditLog, ...(prev || [])]);
 
     // Sync with Supabase
     if (supabase && currentEmployeeInDb) {
@@ -1455,7 +1485,7 @@ export default function EmployeeDashboard(props: any) {
         .from('employees')
         .update({
           status: statusResult,
-          check_in_time: punchType === "in" ? timeStr : (currentEmployeeInDb.checkInTime || currentEmployeeInDb.check_in_time || "—"),
+          check_in_time: punchType === "in" ? timeStr : (currentEmployeeInDb?.checkInTime || currentEmployeeInDb?.check_in_time || "—"),
           check_out_time: punchType === "out" ? timeStr : "—",
           last_punch: timeStr,
           last_latitude: finalDetectedCoords.lat,
@@ -1472,13 +1502,13 @@ export default function EmployeeDashboard(props: any) {
         console.error("Failed to sync employee punch to Supabase:", error);
       } else {
         // Update local state
-        setEmployees(prev => prev.map(e => e.id === currentEmployeeInDb.id ? { 
+        setEmployees(prev => (prev || []).map(e => e && e.id === currentEmployeeInDb?.id ? { 
           ...e, 
           status: statusResult, 
           checkInTime: punchType === "in" ? timeStr : e.checkInTime,
           checkOutTime: punchType === "out" ? timeStr : "—",
           lastPunch: timeStr,
-          check_in_time: punchType === "in" ? timeStr : currentEmployeeInDb.checkInTime, 
+          check_in_time: punchType === "in" ? timeStr : currentEmployeeInDb?.checkInTime, 
           check_out_time: punchType === "out" ? timeStr : "—", 
           last_punch: timeStr 
         } : e));
@@ -1638,9 +1668,9 @@ export default function EmployeeDashboard(props: any) {
     startOfWeekStats.setDate(startOfWeekStats.getDate() - startOfWeekStats.getDay());
     const startOfMonthStats = new Date(nowForStats.getFullYear(), nowForStats.getMonth(), 1);
 
-    return empPersonalLogs.filter(log => {
+    return (empPersonalLogs || []).filter(log => {
       const logDate = getLogDate(log);
-      if (!logDate || log.is_test) return false;
+      if (!logDate || log?.is_test) return false;
       
       const endOfTodayStats = new Date(startOfTodayStats);
       endOfTodayStats.setDate(endOfTodayStats.getDate() + 1);
@@ -1664,7 +1694,7 @@ export default function EmployeeDashboard(props: any) {
     startOfWeekStats.setDate(startOfWeekStats.getDate() - startOfWeekStats.getDay());
     const startOfMonthStats = new Date(nowForStats.getFullYear(), nowForStats.getMonth(), 1);
 
-    return empPersonalLogs.filter(log => {
+    return (empPersonalLogs || []).filter(log => {
       const logDate = getLogDate(log);
       if (!logDate) return false;
       
@@ -1686,7 +1716,7 @@ export default function EmployeeDashboard(props: any) {
 
   const logsByDateMap = useMemo(() => {
     const map = new globalThis.Map<string, any[]>();
-    activeFilteredLogs.forEach(log => {
+    (activeFilteredLogs || []).forEach(log => {
       const logDate = getLogDate(log);
       if (!logDate) return;
       const ds = `${logDate.getFullYear()}-${logDate.getMonth()}-${logDate.getDate()}`;
@@ -1701,7 +1731,7 @@ export default function EmployeeDashboard(props: any) {
   const computedAbsences = Math.max(0, elapsedWorkDays - computedDaysPresent);
   
   const parseDaySessions = (dayLogs: any[]) => {
-    const sortedLogs = [...dayLogs].sort((a, b) => {
+    const sortedLogs = [...(dayLogs || [])].sort((a, b) => {
       const dA = getLogDate(a)?.getTime() || 0;
       const dB = getLogDate(b)?.getTime() || 0;
       return dA - dB;
@@ -1714,7 +1744,7 @@ export default function EmployeeDashboard(props: any) {
     let activeCheckIn: any = null;
 
     for (const log of sortedLogs) {
-      if (log.is_test) continue; // Skip test records for real session pairing
+      if (log?.is_test) continue; // Skip test records for real session pairing
       
       if (isCheckIn(log)) {
         if (activeCheckIn) {
@@ -1735,7 +1765,7 @@ export default function EmployeeDashboard(props: any) {
             hStr = ((t2 - t1) / (1000 * 60 * 60)).toFixed(1) + "h";
           }
           let sStat = "Verified";
-          if (activeCheckIn.status === "warning" || activeCheckIn.faceVerification === "Failed" || log.status === "warning" || log.faceVerification === "Failed") {
+          if (activeCheckIn.status === "warning" || activeCheckIn.faceVerification === "Failed" || log?.status === "warning" || log?.faceVerification === "Failed") {
             sStat = "Warning";
           }
           sessionsList.push({
@@ -1746,7 +1776,7 @@ export default function EmployeeDashboard(props: any) {
           });
           activeCheckIn = null;
         } else {
-          let sStat = log.status === "warning" || log.faceVerification === "Failed" ? "Warning" : "Verified";
+          let sStat = log?.status === "warning" || log?.faceVerification === "Failed" ? "Warning" : "Verified";
           sessionsList.push({
             checkInLog: null,
             checkOutLog: log,
@@ -1812,15 +1842,15 @@ export default function EmployeeDashboard(props: any) {
     let dayTotalHours = 0;
     let overallStatus = "Verified";
 
-    sessions.forEach(s => {
-      if (s.checkInLog && s.checkOutLog) {
+    (sessions || []).forEach(s => {
+      if (s && s.checkInLog && s.checkOutLog) {
         const t1 = getLogDate(s.checkInLog)?.getTime() || 0;
         const t2 = getLogDate(s.checkOutLog)?.getTime() || 0;
         if (t2 > t1) {
           dayTotalHours += (t2 - t1) / (1000 * 60 * 60);
         }
       }
-      if (s.status === "Warning") {
+      if (s && s.status === "Warning") {
         overallStatus = "Warning";
       }
     });
@@ -1830,7 +1860,7 @@ export default function EmployeeDashboard(props: any) {
       daysWithHours++;
     }
 
-    const firstLog = sessions[0]?.checkInLog || dayLogs[0];
+    const firstLog = sessions[0]?.checkInLog || (dayLogs || [])[0];
     const dateObj = getLogDate(firstLog);
     const dateDisplay = dateObj ? dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : "Unknown Date";
     
@@ -1863,10 +1893,10 @@ export default function EmployeeDashboard(props: any) {
   })() : "0h 0m";
 
   // Filter leave requests for this employee
-  const personalLeaves = leaves.filter(
-    req => String(req.employee_id) === String(employeeUser.id) ||
-           (employeeUser.email && req.employee_email === employeeUser.email) ||
-           (employeeUser.name && req.employee_name === employeeUser.name)
+  const personalLeaves = (leaves || []).filter(
+    req => req && (String(req.employee_id) === String(employeeUser?.id) ||
+           (employeeUser?.email && req.employee_email === employeeUser.email) ||
+           (employeeUser?.name && req.employee_name === employeeUser.name))
   );
 
   if (!isFaceRegistered) {
@@ -2352,8 +2382,8 @@ export default function EmployeeDashboard(props: any) {
                         <div className="flex-1">
                           <p className="text-[10px] font-bold text-slate-300">Identify First Check-In</p>
                           <p className="text-[11px] text-slate-400 mt-0.5">
-                            Raw record found: <span className="text-emerald-400 font-mono font-bold">{calculationBreakdown.earliest.time}</span> 
-                            <span className="text-slate-500 mx-1">({calculationBreakdown.earliest.method})</span>
+                            Raw record found: <span className="text-emerald-400 font-mono font-bold">{calculationBreakdown?.earliest?.time || "—"}</span> 
+                            <span className="text-slate-500 mx-1">({calculationBreakdown?.earliest?.method || "Biometric"})</span>
                           </p>
                         </div>
                       </div>
@@ -2363,10 +2393,10 @@ export default function EmployeeDashboard(props: any) {
                         <div className="flex-1">
                           <p className="text-[10px] font-bold text-slate-300">Identify Current/Last Status</p>
                           <p className="text-[11px] text-slate-400 mt-0.5">
-                            {calculationBreakdown.isLoggedIn ? (
+                            {calculationBreakdown?.isLoggedIn ? (
                               <>User is currently <span className="text-emerald-400 font-bold">Logged In</span>. Using live system time: <span className="text-emerald-400 font-mono font-bold">{new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span></>
                             ) : (
-                              <>User is <span className="text-blue-400 font-bold">Logged Out</span>. Using latest valid check-out: <span className="text-blue-400 font-mono font-bold">{calculationBreakdown.latest?.time || "—"}</span></>
+                              <>User is <span className="text-blue-400 font-bold">Logged Out</span>. Using latest valid check-out: <span className="text-blue-400 font-mono font-bold">{calculationBreakdown?.latest?.time || "—"}</span></>
                             )}
                           </p>
                         </div>
@@ -2379,15 +2409,15 @@ export default function EmployeeDashboard(props: any) {
                           <div className="mt-1.5 p-2 bg-slate-900 rounded-xl border border-slate-800 space-y-1">
                             <div className="flex justify-between text-[10px] font-mono">
                               <span className="text-slate-500">Start Time:</span>
-                              <span className="text-slate-300">{calculationBreakdown.startTime.toLocaleTimeString()}</span>
+                              <span className="text-slate-300">{calculationBreakdown?.startTime?.toLocaleTimeString() || "—"}</span>
                             </div>
                             <div className="flex justify-between text-[10px] font-mono">
                               <span className="text-slate-500">End Time:</span>
-                              <span className="text-slate-300">{calculationBreakdown.endTime?.toLocaleTimeString() || "—"}</span>
+                              <span className="text-slate-300">{calculationBreakdown?.endTime?.toLocaleTimeString() || "—"}</span>
                             </div>
                             <div className="flex justify-between text-[11px] font-mono border-t border-slate-800 pt-1 mt-1">
                               <span className="text-brand-500 font-bold">Elapsed Duration:</span>
-                              <span className="text-emerald-400 font-black">{calculationBreakdown.totalHoursStr}</span>
+                              <span className="text-emerald-400 font-black">{calculationBreakdown?.totalHoursStr || "—"}</span>
                             </div>
                           </div>
                         </div>
@@ -2397,13 +2427,13 @@ export default function EmployeeDashboard(props: any) {
                     <div className="pt-2">
                       <p className="text-[9px] font-bold text-slate-500 uppercase mb-2">Raw Sequence of Valid Logs (Chronological)</p>
                       <div className="space-y-1.5">
-                        {calculationBreakdown.records.map((r, i) => (
-                          <div key={`log-${r.time}-${r.method}-${i}`} className="flex items-center justify-between text-[10px] font-mono bg-slate-950/50 p-1.5 rounded-lg border border-slate-900">
+                        {(calculationBreakdown?.records || []).map((r, i) => (
+                          <div key={`log-${r?.time}-${r?.method}-${i}`} className="flex items-center justify-between text-[10px] font-mono bg-slate-950/50 p-1.5 rounded-lg border border-slate-900">
                             <span className={isCheckInLog(r) ? "text-emerald-500" : "text-rose-500"}>
                               {isCheckInLog(r) ? "IN" : "OUT"}
                             </span>
-                            <span className="text-slate-300">{r.time}</span>
-                            <span className="text-slate-500 text-[8px] truncate max-w-[100px]">{r.method}</span>
+                            <span className="text-slate-300">{r?.time || "—"}</span>
+                            <span className="text-slate-500 text-[8px] truncate max-w-[100px]">{r?.method || "—"}</span>
                           </div>
                         ))}
                       </div>
@@ -2523,7 +2553,7 @@ export default function EmployeeDashboard(props: any) {
                     </div>
                   </div>
 
-                  {activeHistoryFilteredLogs.length === 0 ? (
+                  {(activeHistoryFilteredLogs || []).length === 0 ? (
                     <div className="py-8 px-4 rounded-2xl border border-dashed border-slate-800 text-center space-y-2">
                       <p className="text-xs text-slate-500 leading-normal">
                         No attendance records found for this period.
@@ -2531,37 +2561,40 @@ export default function EmployeeDashboard(props: any) {
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {activeHistoryFilteredLogs.slice(0, visibleHistoryLimit).map((log: any, idx: number) => (
-                        <div key={`flat-log-${log.id ?? idx}`} className="bg-slate-900/50 border border-slate-800/80 rounded-2xl p-4 flex items-center justify-between">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <span className={`px-2 py-0.5 rounded-full text-[9px] uppercase tracking-wider font-bold ${
-                                isCheckOutLog(log) ? "bg-rose-500/10 text-rose-400 border border-rose-500/20" : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                              }`}>
-                                {isCheckOutLog(log) ? "Check Out" : "Check In"}
-                              </span>
-                              <span className="text-xs font-bold text-slate-200">{log.date || getLogDate(log).toLocaleDateString()} at {formatDisplayTime(log.time)}</span>
-                              {log.is_test && (
-                                <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-500 text-[8px] font-black border border-amber-500/30 tracking-tighter uppercase">TEST</span>
-                              )}
+                      {(activeHistoryFilteredLogs || []).slice(0, visibleHistoryLimit).map((log: any, idx: number) => {
+                        const logDateStr = log?.date || getLogDate(log)?.toLocaleDateString() || "";
+                        return (
+                          <div key={`flat-log-${log?.id ?? idx}`} className="bg-slate-900/50 border border-slate-800/80 rounded-2xl p-4 flex items-center justify-between">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <span className={`px-2 py-0.5 rounded-full text-[9px] uppercase tracking-wider font-bold ${
+                                  isCheckOutLog(log) ? "bg-rose-500/10 text-rose-400 border border-rose-500/20" : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                                }`}>
+                                  {isCheckOutLog(log) ? "Check Out" : "Check In"}
+                                </span>
+                                <span className="text-xs font-bold text-slate-200">{logDateStr} at {formatDisplayTime(log?.time)}</span>
+                                {log?.is_test && (
+                                  <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-500 text-[8px] font-black border border-amber-500/30 tracking-tighter uppercase">TEST</span>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-slate-400">{log?.zone || "Field Location"} • {log?.method || "Biometric"}</p>
                             </div>
-                            <p className="text-[11px] text-slate-400">{log.zone || "Field Location"} • {log.method || "Biometric"}</p>
+                            <div className="text-right">
+                              <span className={`px-2 py-0.5 rounded-full text-[9px] uppercase tracking-wide font-bold ${
+                                log?.status === "failed" ? "bg-rose-500/10 text-rose-400 border border-rose-500/20" : 
+                                (log?.status === "warning" ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20")
+                              }`}>
+                                {log?.status === "failed" ? "Failed" : (log?.status === "warning" ? "Warning" : "Verified")}
+                              </span>
+                              <p className="text-[10px] font-mono text-slate-500 mt-1">{log?.gpsAccuracy || "—"}</p>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <span className={`px-2 py-0.5 rounded-full text-[9px] uppercase tracking-wide font-bold ${
-                              log.status === "failed" ? "bg-rose-500/10 text-rose-400 border border-rose-500/20" : 
-                              (log.status === "warning" ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20")
-                            }`}>
-                              {log.status === "failed" ? "Failed" : (log.status === "warning" ? "Warning" : "Verified")}
-                            </span>
-                            <p className="text-[10px] font-mono text-slate-500 mt-1">{log.gpsAccuracy || "—"}</p>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                   
-                  {activeHistoryFilteredLogs.length > visibleHistoryLimit && (
+                  {(activeHistoryFilteredLogs || []).length > visibleHistoryLimit && (
                     <div className="pt-2 text-center">
                       <button 
                         onClick={() => setVisibleHistoryLimit(prev => prev + 20)}
@@ -2679,7 +2712,7 @@ export default function EmployeeDashboard(props: any) {
                   </AnimatePresence>
 
                   {/* Personal Leave History */}
-                  {personalLeaves.length === 0 ? (
+                  {(personalLeaves || []).length === 0 ? (
                     <div className="py-8 px-4 rounded-2xl border border-dashed border-slate-800 text-center">
                       <p className="text-xs text-slate-500 leading-normal">
                         You haven't requested any leave yet.
@@ -2687,29 +2720,32 @@ export default function EmployeeDashboard(props: any) {
                     </div>
                   ) : (
                     <div className="space-y-2.5">
-                      {personalLeaves.map((req, idx) => {
-                        const statusLower = (req.status || "").toLowerCase();
+                      {(personalLeaves || []).map((req, idx) => {
+                        const statusLower = (req?.status || "").toLowerCase();
                         const isApproved = statusLower === "approved";
                         const isRejected = statusLower === "rejected";
+                        const createdAtStr = req?.created_at ? new Date(req.created_at).toLocaleDateString() : "—";
                         return (
                           <div key={req?.id ? `personal-leave-${req.id}-${idx}` : `personal-leave-fallback-${idx}`} className="p-3 bg-slate-950/20 border border-slate-800/80 rounded-xl text-left space-y-1">
                             <div className="flex items-center justify-between">
-                              <span className="text-xs font-black text-slate-200">{req.leave_type}</span>
+                              <span className="text-xs font-black text-slate-200">{req?.leave_type || "Leave Request"}</span>
                               <span className={`px-2 py-0.5 rounded-full text-[8px] font-extrabold uppercase tracking-wider ${
                                 isApproved ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" :
                                 isRejected ? "bg-rose-500/10 text-rose-400 border border-rose-500/20" :
                                 "bg-amber-500/10 text-amber-400 border border-amber-500/20"
                               }`}>
-                                {isApproved ? "Approved" : (isRejected ? "Rejected" : req.status)}
+                                {isApproved ? "Approved" : (isRejected ? "Rejected" : req?.status || "Pending")}
                               </span>
                             </div>
                             <div className="flex justify-between text-[10px] text-slate-500 font-mono">
-                              <span>Range: {req.start_date} to {req.end_date}</span>
-                              <span>{new Date(req.created_at).toLocaleDateString()}</span>
+                              <span>Range: {req?.start_date || "—"} to {req?.end_date || "—"}</span>
+                              <span>{createdAtStr}</span>
                             </div>
-                            <p className="text-[10px] text-slate-400 mt-1 italic font-display">
-                              "{req.reason}"
-                            </p>
+                            {req?.reason && (
+                              <p className="text-[10px] text-slate-400 mt-1 italic font-display">
+                                "{req.reason}"
+                              </p>
+                            )}
                           </div>
                         );
                       })}
