@@ -3140,7 +3140,7 @@ export default function MasterAdminDashboard({ onLogOut, user }: MasterAdminDash
                                 <td colSpan={5} className="p-6 text-center text-slate-400">No employees registered for this organization.</td>
                               </tr>
                             ) : (
-                              compEmps.map(emp => {
+                              compEmps.map((emp, idx) => {
                                 const empLogs = compLogs.filter(l => l.employee_id === emp.id || String(l.employeeId) === String(emp.id) || l.name?.toLowerCase() === emp.name?.toLowerCase());
                                 const todayLogs = empLogs.filter(l => {
                                   const t = l.time || l.created_at || l.timestamp;
@@ -3189,7 +3189,7 @@ export default function MasterAdminDashboard({ onLogOut, user }: MasterAdminDash
                                 const lastCheckInFormatted = formatDateTimeDDMMYYYYHHmm(checkInTimestamp);
 
                                 return (
-                                  <tr key={emp.id} className="hover:bg-slate-50">
+                                  <tr key={emp?.id ? `master-emp-${emp.id}-${idx}` : `master-emp-fallback-${idx}`} className="hover:bg-slate-50">
                                     <td className="p-3 font-bold text-slate-900">{emp.name}</td>
                                     <td className="p-3 text-slate-600">{emp.department || 'General'}</td>
                                     <td className="p-3 text-slate-600">{emp.role || 'Staff'}</td>
@@ -3321,8 +3321,8 @@ export default function MasterAdminDashboard({ onLogOut, user }: MasterAdminDash
                         {compLeaves.length === 0 ? (
                           <div className="p-6 text-center text-slate-400 bg-slate-50 rounded-xl border border-slate-200">No leave requests found for this company.</div>
                         ) : (
-                          compLeaves.map(leave => (
-                            <div key={leave.id} className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center">
+                          compLeaves.map((leave, idx) => (
+                            <div key={leave?.id ? `master-leave-${leave.id}-${idx}` : `master-leave-fallback-${idx}`} className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center">
                               <div>
                                 <span className="font-bold text-slate-900">{leave.employee_name || 'Staff Member'}</span>
                                 <p className="text-slate-600 text-[11px] mt-0.5">{leave.leave_type || 'Casual Leave'} • {leave.total_days || 1} days</p>
@@ -3625,8 +3625,8 @@ export default function MasterAdminDashboard({ onLogOut, user }: MasterAdminDash
                     <div className="space-y-4 animate-fadeIn">
                       <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Latest Company Activities</h3>
                       <div className="space-y-3">
-                        {companyActivities.map(act => (
-                          <div key={act.id} className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center">
+                        {companyActivities.map((act, idx) => (
+                          <div key={act?.id ? `master-act-${act.id}-${idx}` : `master-act-fallback-${idx}`} className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center">
                             <div className="flex items-center space-x-3">
                               <div className="w-2 h-2 rounded-full bg-indigo-600"></div>
                               <div>

@@ -213,9 +213,7 @@ export default function EmployeeDashboard(props: EmployeeDashboardProps) {
   const [fetchTrigger, setFetchTrigger] = useState(0);
 
   // Test Mode State
-  const [testModeEnabled, setTestModeEnabled] = useState(false);
-  const [simulatedCoords, setSimulatedCoords] = useState<{lat: number, lng: number, accuracy: number} | null>(null);
-  const isTestModeGlobalEnabled = import.meta.env.VITE_ENABLE_TEST_MODE === 'true';
+  
   
   // Reset limit when period changes
   useEffect(() => {
@@ -425,12 +423,6 @@ export default function EmployeeDashboard(props: EmployeeDashboardProps) {
               
               let finalLat = Number(matchedAnchor.latitude || matchedAnchor.lat);
               let finalLng = Number(matchedAnchor.longitude || matchedAnchor.lng);
-              
-              if (displayName && displayName.toLowerCase().includes("marathon nexzone")) {
-                // Force correct exact coordinates for Marathon Nexzone to fix discrepancy
-                finalLat = 18.9658757;
-                finalLng = 73.1269787;
-              }
 
               setCompanyGeofence({
                 name: displayName,
@@ -1348,8 +1340,8 @@ export default function EmployeeDashboard(props: EmployeeDashboardProps) {
     if (isSubmittingPunch) return;
     
     // Use simulated coordinates if test mode is enabled and coords are set
-    const finalDetectedCoords = overrideCoords || ((testModeEnabled && simulatedCoords) ? simulatedCoords : detectedCoords);
-    const finalAccuracyVal = overrideCoords ? overrideCoords.accuracy : ((testModeEnabled && simulatedCoords) ? simulatedCoords.accuracy : detectedCoords?.accuracy);
+    const finalDetectedCoords = overrideCoords || detectedCoords;
+    const finalAccuracyVal = overrideCoords ? overrideCoords.accuracy : detectedCoords?.accuracy;
 
     if (!finalDetectedCoords) {
       alert("⚠️ Valid GPS location and high-accuracy coordinates are required for both check-in and check-out. Please complete GPS verification successfully.");
@@ -1366,7 +1358,7 @@ export default function EmployeeDashboard(props: EmployeeDashboardProps) {
     const todayDateStr = now.toLocaleDateString('en-CA');
     
     // Fetch geocoded address dynamically if not already set
-    let address = (testModeEnabled && simulatedCoords) ? "Simulated Test Location" : detectedAddress;
+    let address = detectedAddress;
     if (finalDetectedCoords && !address) {
       address = await fetchReverseGeocode(finalDetectedCoords.lat, finalDetectedCoords.lng);
     }
@@ -1495,7 +1487,7 @@ export default function EmployeeDashboard(props: EmployeeDashboardProps) {
       date: todayDateStr,
       fullTimestamp: now.toISOString(),
       status: finalLogStatus,
-      is_test: testModeEnabled,
+      is_test: false,
       gpsAccuracy: gpsAccuracyStr,
       gpsLatitude: finalDetectedCoords.lat,
       gpsLongitude: finalDetectedCoords.lng,
@@ -1562,7 +1554,7 @@ export default function EmployeeDashboard(props: EmployeeDashboardProps) {
       const devInfo = `${browser} on ${os}`;
       const finalIp = clientIp || `103.114.50.${Math.floor(Math.random() * 250) + 1}`;
 
-      const baseMethod = (testModeEnabled ? "[TEST] " : "") + (hasFaceVerificationError ? "Pending Manual Review — Face Verification Unavailable" : (hasFaceMismatchBypass ? `Face Mismatch - Punch Allowed${lastMatchDistance !== null ? ` (Dist: ${lastMatchDistance.toFixed(3)})` : ''}` : (punchType === "in" ? `Face Match Check-In${lastMatchDistance !== null ? ` (Dist: ${lastMatchDistance.toFixed(3)}, Threshold: 0.50)` : ''}` : `Face Match Check-Out${lastMatchDistance !== null ? ` (Dist: ${lastMatchDistance.toFixed(3)}, Threshold: 0.50)` : ''}`)));
+      const baseMethod = ("") + (hasFaceVerificationError ? "Pending Manual Review — Face Verification Unavailable" : (hasFaceMismatchBypass ? `Face Mismatch - Punch Allowed${lastMatchDistance !== null ? ` (Dist: ${lastMatchDistance.toFixed(3)})` : ''}` : (punchType === "in" ? `Face Match Check-In${lastMatchDistance !== null ? ` (Dist: ${lastMatchDistance.toFixed(3)}, Threshold: 0.50)` : ''}` : `Face Match Check-Out${lastMatchDistance !== null ? ` (Dist: ${lastMatchDistance.toFixed(3)}, Threshold: 0.50)` : ''}`)));
 
       const logPayload = {
         employee_id: currentEmployeeInDb.id,
@@ -2087,24 +2079,7 @@ export default function EmployeeDashboard(props: EmployeeDashboardProps) {
 
           {/* Profile User Avatar + Logout with Clean Unified Pill Style */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {import.meta.env.VITE_ENABLE_TEST_MODE === "true" && (
-              <button
-                type="button"
-                onClick={() => setTestModeEnabled(!testModeEnabled)}
-                className={`h-9 px-2.5 rounded-full flex items-center gap-1.5 transition-all duration-200 border shadow-sm active:scale-95 cursor-pointer ${
-                  testModeEnabled 
-                    ? "bg-amber-500/20 text-amber-300 border-amber-500/50 ring-2 ring-amber-500/30" 
-                    : "bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-amber-300 border-amber-500/30"
-                }`}
-                title={testModeEnabled ? "Test Mode Active (Click to Disable)" : "Enable Developer Test Mode"}
-                id="header-test-mode-btn"
-              >
-                <Settings className={`h-4 w-4 text-amber-400 ${testModeEnabled ? "animate-spin-slow" : ""}`} />
-                <span className="text-[10px] uppercase tracking-wider font-mono font-bold">
-                  {testModeEnabled ? "Dev Mode ON" : "Dev Mode"}
-                </span>
-              </button>
-            )}
+            
             <button
               onClick={() => setIsSupportModalOpen(true)}
               className="h-9 w-9 rounded-full bg-[#1E293B] hover:bg-[#334155] text-cyan-400 hover:text-cyan-300 border border-[#334155] transition-all duration-200 cursor-pointer flex items-center justify-center shrink-0 shadow-sm active:scale-95"
@@ -2171,74 +2146,7 @@ export default function EmployeeDashboard(props: EmployeeDashboardProps) {
               </div>
             </div>
 
-            {/* TEST MODE PANEL */}
-            <AnimatePresence>
-              {testModeEnabled && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="mt-6 p-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl overflow-hidden"
-                >
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="h-5 w-5 rounded bg-amber-500 flex items-center justify-center text-white">
-                      <Settings className="h-3 w-3" />
-                    </div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-amber-500">Developer Test Mode</span>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => setSimulatedCoords({
-                        lat: activeGeofence?.lat || OFFICE_COORDS.lat,
-                        lng: activeGeofence?.lng || OFFICE_COORDS.lng,
-                        accuracy: 10
-                      })}
-                      className={`py-2.5 px-3 rounded-xl text-[10px] font-bold border transition-all ${
-                        simulatedCoords?.lat === (activeGeofence?.lat || OFFICE_COORDS.lat)
-                          ? "bg-amber-500 text-white border-amber-600"
-                          : "bg-slate-800 text-slate-300 border-slate-700 hover:border-amber-500/50"
-                      }`}
-                    >
-                      SIMULATE ON-SITE
-                    </button>
-                    <button
-                      onClick={() => setSimulatedCoords({
-                        lat: (activeGeofence?.lat || OFFICE_COORDS.lat) + 0.05, // ~5km away
-                        lng: (activeGeofence?.lng || OFFICE_COORDS.lng) + 0.05,
-                        accuracy: 10
-                      })}
-                      className={`py-2.5 px-3 rounded-xl text-[10px] font-bold border transition-all ${
-                        simulatedCoords?.lat !== (activeGeofence?.lat || OFFICE_COORDS.lat) && simulatedCoords !== null
-                          ? "bg-amber-500 text-white border-amber-600"
-                          : "bg-slate-800 text-slate-300 border-slate-700 hover:border-amber-500/50"
-                      }`}
-                    >
-                      SIMULATE OFF-SITE
-                    </button>
-                  </div>
-                  
-                  {simulatedCoords && (
-                    <div className="mt-3 flex items-center justify-between px-1">
-                      <div className="flex flex-col text-left">
-                        <span className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter">Coordinates Locked</span>
-                        <span className="text-[10px] text-amber-200 font-mono">{simulatedCoords.lat.toFixed(4)}, {simulatedCoords.lng.toFixed(4)}</span>
-                      </div>
-                      <button 
-                        onClick={() => setSimulatedCoords(null)}
-                        className="text-[9px] font-black text-rose-500 uppercase tracking-widest"
-                      >
-                        Clear
-                      </button>
-                    </div>
-                  )}
-                  
-                  <p className="mt-3 text-[9px] text-slate-500 font-medium leading-tight">
-                    Simulated coordinates will be used for the next action only. This will create a <span className="text-amber-500 font-bold italic">TEST record</span> in history.
-                  </p>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            
 
             {/* Confirmation Alert Banner */}
             <AnimatePresence>
@@ -2595,7 +2503,7 @@ export default function EmployeeDashboard(props: EmployeeDashboardProps) {
                       {(activeHistoryFilteredLogs || []).slice(0, visibleHistoryLimit).map((log: any, idx: number) => {
                         const logDateStr = log?.date || getLogDate(log)?.toLocaleDateString() || "";
                         return (
-                          <div key={`flat-log-${log?.id ?? idx}`} className="bg-slate-900/50 border border-slate-800/80 rounded-2xl p-4 flex items-center justify-between">
+                          <div key={`flat-log-${log?.id && log.id !== "LOG-undefined" && log.id !== "undefined" ? log.id : 'log'}-${idx}`} className="bg-slate-900/50 border border-slate-800/80 rounded-2xl p-4 flex items-center justify-between">
                             <div className="space-y-1">
                               <div className="flex items-center gap-2">
                                 <span className={`px-2 py-0.5 rounded-full text-[9px] uppercase tracking-wider font-bold ${

@@ -816,8 +816,8 @@ export default function EmployerDashboard(props: any) {
             id: `loc-${ez.toLowerCase().replace(/\s+/g, '-')}`,
             name: ez,
             address: ez,
-            lat: ez.toLowerCase().includes("marathon nexzone") ? 18.9658757 : 18.96,
-            lng: ez.toLowerCase().includes("marathon nexzone") ? 73.1269787 : 73.12,
+            lat: 18.96,
+            lng: 73.12,
             radius: 150,
             activeEmployees: 0,
             status: "Active"
@@ -1157,7 +1157,7 @@ export default function EmployerDashboard(props: any) {
       if (isLeaveToday) {
         status = "On Leave";
       } else if (empLogs.length > 0) {
-        isInsideGeofence = true;
+        let allInside = true;
         const sorted = [...empLogs].sort((a, b) => new Date(a.created_at || a.time || 0).getTime() - new Date(b.created_at || b.time || 0).getTime());
         const checkInLog = sorted.find(l => isCheckInLog(l)) || sorted[0];
         const checkOutLog = sorted.slice().reverse().find(l => isCheckOutLog(l));
@@ -1190,13 +1190,14 @@ export default function EmployerDashboard(props: any) {
             logInside = false;
           }
           if (!logInside) {
-             isInsideGeofence = false;
+             allInside = false;
              hasGpsFailure = true;
           }
           if (l.status === "warning" || l.face_verified === false || l.verification_status === "failed") {
             hasFaceFailure = true;
           }
         });
+        isInsideGeofence = allInside;
       }
 
       return {
@@ -2578,8 +2579,8 @@ export default function EmployerDashboard(props: any) {
                     if (isLeaveToday) {
                       status = "On Leave";
                     } else if (empLogs.length > 0) {
-                      isInsideGeofence = true;
-                      const sorted = [...empLogs].sort((a, b) => new Date(a.created_at || a.time || 0).getTime() - new Date(b.created_at || b.time || 0).getTime());
+                      let allInside = true;
+        const sorted = [...empLogs].sort((a, b) => new Date(a.created_at || a.time || 0).getTime() - new Date(b.created_at || b.time || 0).getTime());
                       const checkInLog = sorted.find(l => isCheckInLog(l)) || sorted[0];
                       const checkOutLog = sorted.slice().reverse().find(l => isCheckOutLog(l));
                       const latestLog = sorted[sorted.length - 1];
@@ -2622,9 +2623,9 @@ export default function EmployerDashboard(props: any) {
                           logInside = false;
                         }
                         if (!logInside) {
-                           isInsideGeofence = false;
-                           hasGpsFailure = true;
-                        }
+             allInside = false;
+             hasGpsFailure = true;
+          }
                         if (l.status === "warning" || l.face_verified === false || l.verification_status === "failed") {
                           hasFaceFailure = true;
                         }
@@ -2632,6 +2633,7 @@ export default function EmployerDashboard(props: any) {
                           hasTestRecord = true;
                         }
                       });
+                      isInsideGeofence = allInside;
                     }
 
                     return {
@@ -3909,7 +3911,7 @@ export default function EmployerDashboard(props: any) {
                               const pinVal = pinResetInputs[req.id] || "";
 
                               return (
-                                <tr key={`pin-reset-desktop-${req.id}`} className="hover:bg-slate-50/60 transition-all duration-200">
+                                <tr key={`pin-reset-desktop-${req.id ?? idx}-${idx}`} className="hover:bg-slate-50/60 transition-all duration-200">
                                   <td className="py-4 px-6 font-bold text-slate-850 text-xs">
                                     <div className="flex items-center gap-2.5">
                                       <div className="h-7 w-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center font-black text-xs shrink-0">
@@ -3955,14 +3957,14 @@ export default function EmployerDashboard(props: any) {
 
                       {/* Mobile view */}
                       <div className="block md:hidden divide-y divide-slate-100">
-                        {pendingPinResetRequests.map((req) => {
+                        {pendingPinResetRequests.map((req, idx) => {
                           const empName = req.employee_name || "Employee";
                           const empId = req.employee_id;
                           const submittedAt = new Date(req.created_at).toLocaleDateString();
                           const pinVal = pinResetInputs[req.id] || "";
 
                           return (
-                            <div key={`pin-reset-mobile-${req.id}`} className="p-4 space-y-3 text-left">
+                            <div key={`pin-reset-mobile-${req.id ?? idx}-${idx}`} className="p-4 space-y-3 text-left">
                               <div className="flex items-center gap-2.5">
                                 <div className="h-8 w-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center font-black text-xs shrink-0">
                                   {empName.charAt(0)}
