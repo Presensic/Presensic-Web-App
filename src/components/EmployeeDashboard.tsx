@@ -2486,7 +2486,7 @@ export default function EmployeeDashboard(props: EmployeeDashboardProps) {
                     if (checkInTime !== "—" && checkInTime !== "null" && checkInTime !== null) {
                       if (!isLoggedIn) return "Checked Out";
                       
-                      let displayDist = "On Site (Live)";
+                      let displayDist = "Out of Bounds";
                       
                       // Try to calculate distance from last known location or currently computed distance
                       const lat1 = currentEmployeeInDb?.last_latitude;
@@ -2504,7 +2504,7 @@ export default function EmployeeDashboard(props: EmployeeDashboardProps) {
                           if (isInside) {
                               displayDist = "Inside Geofence";
                           } else {
-                              displayDist = dist >= 1000 ? `${(dist / 1000).toFixed(1)} km from office` : `${Math.round(dist)} m from office`;
+                              displayDist = "Outside Geofence";
                           }
                       }
                       

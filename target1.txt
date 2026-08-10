@@ -1,0 +1,26 @@
+        empLogs.forEach(l => {
+          let logInside = true;
+          if (l.isNotRegistered || l.gps_verified === false || l.inside_geofence === false) {
+            logInside = false;
+          }
+          const empZone = zones.find(z => z.name === (emp.zone || l.zone));
+          if (empZone && empZone.lat && empZone.lng && l.gps_latitude != null && l.gps_longitude != null) {
+            const dist = calculateDistance(l.gps_latitude, l.gps_longitude, empZone.lat, empZone.lng);
+            if (dist > (empZone.radius || currentCompany?.geofence_radius || 150)) {
+              logInside = false;
+            }
+          } else if (l.distance && l.distance > (empZone?.radius || currentCompany?.geofence_radius || 150)) {
+            logInside = false;
+          }
+          if (!logInside) {
+             isInsideGeofence = false;
+             hasGpsFailure = true;
+          }
+          if (l.status === "warning" || l.face_verified === false || l.verification_status === "failed") {
+            hasFaceFailure = true;
+          }
+        });
+      }
+
+      return {
+        emp,

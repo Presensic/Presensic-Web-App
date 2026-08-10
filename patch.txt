@@ -1,0 +1,23 @@
+/empLogs.forEach(l => {/ {
+N
+N
+N
+N
+N
+N
+N
+N
+N
+N
+N
+N
+N
+N
+N
+N
+N
+N
+N
+N
+d
+}
