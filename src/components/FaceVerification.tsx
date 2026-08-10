@@ -272,11 +272,16 @@ const checkLivenessFromLandmarks = (landmarks: any) => {
               for (const sample of parsed) {
                 if (Array.isArray(sample) && sample.length > 0) {
                   candidateEmbeddings.push(Float32Array.from(sample));
+                } else if (typeof sample === 'object' && sample !== null) {
+                  candidateEmbeddings.push(Float32Array.from(Object.values(sample) as number[]));
                 }
               }
             } else if (Array.isArray(parsed) && parsed.length > 0) {
               // Single-sample format: 128D vector
               candidateEmbeddings.push(Float32Array.from(parsed));
+            } else if (typeof parsed === 'object' && parsed !== null) {
+              // Object format {"0": 0.1, "1": 0.2 ... }
+              candidateEmbeddings.push(Float32Array.from(Object.values(parsed) as number[]));
             }
           }
         }
@@ -296,10 +301,14 @@ const checkLivenessFromLandmarks = (landmarks: any) => {
           for (const sample of parsed) {
             if (Array.isArray(sample) && sample.length > 0) {
               candidateEmbeddings.push(Float32Array.from(sample));
+            } else if (typeof sample === 'object' && sample !== null) {
+              candidateEmbeddings.push(Float32Array.from(Object.values(sample) as number[]));
             }
           }
         } else if (Array.isArray(parsed) && parsed.length > 0) {
           candidateEmbeddings.push(Float32Array.from(parsed));
+        } else if (typeof parsed === 'object' && parsed !== null) {
+          candidateEmbeddings.push(Float32Array.from(Object.values(parsed) as number[]));
         }
       }
 
@@ -338,11 +347,28 @@ const checkLivenessFromLandmarks = (landmarks: any) => {
       }
 
       let bestDistance = Number.MAX_VALUE;
-      for (const refDescriptor of candidateEmbeddings) {
-        const dist = descriptorDistance(result.descriptor, refDescriptor);
-        if (dist < bestDistance) {
-          bestDistance = dist;
+      for (let i = 0; i < candidateEmbeddings.length; i++) {
+        const refDescriptor = candidateEmbeddings[i];
+        if (refDescriptor.length !== 128 || result.descriptor.length !== 128) {
+          console.error(`Invalid descriptor length. Ref: ${refDescriptor.length}, Live: ${result.descriptor.length}`);
+          continue;
         }
+        try {
+          const dist = descriptorDistance(result.descriptor, refDescriptor);
+          if (dist < bestDistance) {
+            bestDistance = dist;
+          }
+        } catch (err) {
+          console.error(`Error calculating distance for descriptor ${i}:`, err);
+        }
+      }
+
+      if (bestDistance === Number.MAX_VALUE) {
+        setStatus("error");
+        setDetail("Failed to compare biometrics due to corrupted data.");
+        setBlinkVerified(false);
+        onFail?.("error");
+        return;
       }
 
       if (bestDistance > MATCH_THRESHOLD) {

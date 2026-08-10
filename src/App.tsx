@@ -52,29 +52,15 @@ export default function App() {
     } catch (e) {
       console.error("Error parsing presensic_user:", e);
     }
-    const defaultFallback = {
-      id: "PRES-1285",
-      name: "Parnavi Lotankar",
-      role: "employee",
-      orgName: "DS Ventures",
-      designation: "Software Engineer",
-      email: "parnavi@dsventures.in",
-      faceRegistered: true,
-      face_registered: true,
-      whatsApp: "+91 98765 00000"
-    };
-    try {
-      localStorage.setItem("presensic_user", JSON.stringify(defaultFallback));
-    } catch (e) {}
-    return defaultFallback;
+    return null;
   });
 
   const [currentView, setCurrentView] = useState<string>(() => {
     try {
       const saved = localStorage.getItem("presensic_current_view");
-      return saved || "employee_dashboard";
+      return saved || "home";
     } catch {
-      return "employee_dashboard";
+      return "home";
     }
   });
 

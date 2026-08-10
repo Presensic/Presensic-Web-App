@@ -168,17 +168,7 @@ export default function EmployeeDashboard(props: EmployeeDashboardProps) {
     } catch (e) {
       console.error("Error reading presensic_user in EmployeeDashboard normalization:", e);
     }
-    return {
-      id: "PRES-1285",
-      name: "Parnavi Lotankar",
-      role: "employee",
-      orgName: "DS Ventures",
-      designation: "Software Engineer",
-      email: "parnavi@dsventures.in",
-      faceRegistered: true,
-      face_registered: true,
-      whatsApp: "+91 98765 00000"
-    };
+    return null;
   })();
 
   // Guard all array methods with safe fallback constants
@@ -1432,11 +1422,11 @@ export default function EmployeeDashboard(props: EmployeeDashboardProps) {
     }
 
     // Enforce geofence bypass rule from system_settings if activeGeofence exists
-    if (activeGeofence && punchType === "in" && !isWithinGeofence && !isLowAccuracy && currentAllowGeoBypass === false) {
+    if (activeGeofence && punchType === "in" && !isWithinGeofence && !isLowAccuracy) {
       const distanceStr = Math.round(finalDistance || 0);
-      const rejectMsg = `⛔ Geofence Bypass Disabled by Employer. You are currently ${distanceStr}m away from "${activeGeofence.name}" (allowed radius: ${activeGeofence.radius}m). Check-in rejected.`;
+      const rejectMsg = `⛔ Outside Geofence. You are currently ${distanceStr}m away from "${activeGeofence.name}" (allowed radius: ${activeGeofence.radius}m). Check-in rejected.`;
       
-      console.warn("Check-in rejected due to disabled geo-bypass policy:", rejectMsg);
+      console.warn("Check-in rejected due to geofence policy:", rejectMsg);
 
       setGpsError(rejectMsg);
       setConfirmationMessage(rejectMsg);

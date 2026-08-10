@@ -84,6 +84,17 @@ export const formatDisplayTime = (timeValue: any): string => {
     return str;
   }
 
+  // Handle 24-hour time strings like "14:16" or "14:16:00"
+  const timeRegex = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/;
+  const match = str.match(timeRegex);
+  if (match) {
+    const hours = parseInt(match[1], 10);
+    const minutes = match[2];
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const hours12 = hours % 12 || 12;
+    return `${hours12.toString().padStart(2, '0')}:${minutes} ${ampm}`;
+  }
+
   // Try parsing as a generic date
   const date = new Date(str);
   if (!isNaN(date.getTime()) && str.length > 5) {

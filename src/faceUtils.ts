@@ -78,7 +78,7 @@ export function descriptorDistance(a: Float32Array, b: Float32Array) {
   return faceapi.euclideanDistance(a, b);
 }
 
-export const MATCH_THRESHOLD = 0.5;
+export const MATCH_THRESHOLD = 0.65;
 
 export function averageDescriptors(descriptors: Float32Array[]): Float32Array {
   const len = descriptors[0].length;
