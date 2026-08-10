@@ -1137,7 +1137,7 @@ export default function EmployeeDashboard(props: EmployeeDashboardProps) {
 
     try {
       const now = new Date();
-      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
       const todayDateStr = now.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
       const coordinatesStr = `${detectedCoords?.lat || 0}, ${detectedCoords?.lng || 0}`;
 
@@ -1361,7 +1361,7 @@ export default function EmployeeDashboard(props: EmployeeDashboardProps) {
     try {
 
     const now = new Date();
-    const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const timeStr = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
     const dateStr = now.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
     const todayDateStr = now.toLocaleDateString('en-CA');
     
@@ -1421,12 +1421,16 @@ export default function EmployeeDashboard(props: EmployeeDashboardProps) {
       }
     }
 
-    // Enforce geofence bypass rule from system_settings if activeGeofence exists
-    if (activeGeofence && punchType === "in" && !isWithinGeofence && !isLowAccuracy) {
-      const distanceStr = Math.round(finalDistance || 0);
-      const rejectMsg = `⛔ Outside Geofence. You are currently ${distanceStr}m away from "${activeGeofence.name}" (allowed radius: ${activeGeofence.radius}m). Check-in rejected.`;
+    // Strict Haversine Geofencing Enforced
+    if (activeGeofence && !isWithinGeofence) {
+      const distanceStr = finalDistance !== null ? Math.round(finalDistance) : "unknown";
+      let rejectMsg = `⛔ Outside Geofence. You are currently ${distanceStr}m away from "${activeGeofence.name}" (allowed radius: ${activeGeofence.radius}m). Action rejected.`;
       
-      console.warn("Check-in rejected due to geofence policy:", rejectMsg);
+      if (isLowAccuracy) {
+         rejectMsg = `⛔ Low GPS Accuracy. Cannot verify you are within the ${activeGeofence.radius}m geofence for "${activeGeofence.name}". Action rejected.`;
+      }
+      
+      console.warn("Check-in/out rejected due to strict geofence policy:", rejectMsg);
 
       setGpsError(rejectMsg);
       setConfirmationMessage(rejectMsg);
@@ -1461,15 +1465,19 @@ export default function EmployeeDashboard(props: EmployeeDashboardProps) {
 
     // 1. Update general employees list state
     setEmployees(prev => (prev || []).map(e => {
-      if (e && (e.email?.toLowerCase() === employeeUser?.email?.toLowerCase() || e.id === currentEmployeeInDb?.id || e.name === employeeUser?.name)) {
+      const matchByEmail = Boolean(employeeUser?.email && e.email?.toLowerCase() === employeeUser.email.toLowerCase());
+      const matchById = Boolean(currentEmployeeInDb?.id && String(e.id) === String(currentEmployeeInDb.id));
+      const matchByName = Boolean(employeeUser?.name && e.name === employeeUser.name);
+      
+      if (e && (matchByEmail || matchById || matchByName)) {
         return {
           ...e,
           status: statusResult as any,
-          checkInTime: punchType === "in" ? timeStr : e.checkInTime,
-          checkOutTime: punchType === "out" ? timeStr : "—",
+          checkInTime: punchType === "in" ? timeStr : (e.checkInTime || e.check_in_time),
+          checkOutTime: punchType === "out" ? timeStr : (punchType === "in" ? "—" : (e.checkOutTime || e.check_out_time)),
           lastPunch: timeStr,
-          check_in_time: punchType === "in" ? timeStr : e.checkInTime,
-          check_out_time: punchType === "out" ? timeStr : "—",
+          check_in_time: punchType === "in" ? timeStr : (e.checkInTime || e.check_in_time),
+          check_out_time: punchType === "out" ? timeStr : (punchType === "in" ? "—" : (e.checkOutTime || e.check_out_time)),
           last_punch: timeStr
         };
       }
@@ -1525,14 +1533,14 @@ export default function EmployeeDashboard(props: EmployeeDashboardProps) {
         console.error("Failed to sync employee punch to Supabase:", error);
       } else {
         // Update local state
-        setEmployees(prev => (prev || []).map(e => e && e.id === currentEmployeeInDb?.id ? { 
+        setEmployees(prev => (prev || []).map(e => (e && currentEmployeeInDb && String(e.id) === String(currentEmployeeInDb.id)) ? { 
           ...e, 
           status: statusResult, 
-          checkInTime: punchType === "in" ? timeStr : e.checkInTime,
-          checkOutTime: punchType === "out" ? timeStr : "—",
+          checkInTime: punchType === "in" ? timeStr : (e.checkInTime || e.check_in_time),
+          checkOutTime: punchType === "out" ? timeStr : (punchType === "in" ? "—" : (e.checkOutTime || e.check_out_time)),
           lastPunch: timeStr,
-          check_in_time: punchType === "in" ? timeStr : currentEmployeeInDb?.checkInTime, 
-          check_out_time: punchType === "out" ? timeStr : "—", 
+          check_in_time: punchType === "in" ? timeStr : (e.checkInTime || e.check_in_time), 
+          check_out_time: punchType === "out" ? timeStr : (punchType === "in" ? "—" : (e.checkOutTime || e.check_out_time)), 
           last_punch: timeStr 
         } : e));
       }
